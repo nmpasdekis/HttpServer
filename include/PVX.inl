@@ -7,13 +7,14 @@
 #include<random>
 #include <initializer_list>
 #include <set>
+#include <algorithm>
 
 namespace PVX {
 	template<typename T>
 	inline std::vector<T> ToVector(const T * Array, size_t Count) {
 		std::vector<T> ret(Count);
 		memcpy(&ret[0], Array, sizeof(T) * Count);
-		return ret;
+		return std::move(ret);
 	}
 
 	template<typename T, typename T2>
@@ -24,7 +25,7 @@ namespace PVX {
 			if (condition(a))
 				ret.push_back(a);
 		ret.shrink_to_fit();
-		return ret;
+		return std::move(ret);
 	}
 	template<typename T, typename T2>
 	inline std::vector<T> Filter(const std::vector<T> & Array, T2 condition) {
@@ -34,7 +35,7 @@ namespace PVX {
 			if (condition(a))
 				ret.push_back(a);
 		ret.shrink_to_fit();
-		return ret;
+		return std::move(ret);
 	}
 	template<typename T, typename T2>
 	inline std::pair<std::vector<T>, std::vector<T>> Separate(const std::vector<T> & Array, T2 condition) {
@@ -53,12 +54,6 @@ namespace PVX {
 		return std::make_pair(ret1, ret2);
 	}
 	template<typename T>
-	inline T Reduce(const std::vector<T> & Array, std::function<T(T& Result, T& item)> fnc, T Default) {
-		for (auto & i : Array)
-			Default = fnc(Default, i);
-		return Default;
-	}
-	template<typename T>
 	inline long long IndexOf(const std::vector<T> & Array, std::function<bool(T& a)> fnc) {
 		for (long long i = 1; i < Array.size(); i++) {
 			if (fnc(Array[i]))
@@ -74,31 +69,29 @@ namespace PVX {
 		for (auto i = From; i < To; i += Step) {
 			ret.push_back(i);
 		}
-		return ret;
+		return std::move(ret);
 	}
 	inline std::vector<int> IndexArray(int Count) {
 		std::vector<int> ret(Count);
 		for (auto i = 0; i < Count; i++) {
 			ret[i] = i;
 		}
-		return ret;
+		return std::move(ret);
 	}
 	inline std::vector<int> IndexArrayRef(int Count, int & Base) {
 		std::vector<int> ret(Count);
 		for (auto i = 0; i < Count; i++)
 			ret[i] = Base++;
-		return ret;
+		return std::move(ret);
 	}
 
 	template<typename T>
-	inline void Randomize(std::vector<T> & v) {
+	inline void Randomize(std::vector<T>& v) {
+		std::default_random_engine gen;
+		std::normal_distribution dist(0, v.size()-1);
 		for (int i = 0; i < v.size(); i++) {
-			int r = ((std::rand() << 24) ^ (std::rand() << 16) ^ (std::rand() << 8) ^ (std::rand())) % v.size();
-			if (i != r) {
-				T tmp = v[i];
-				v[i] = v[r];
-				v[r] = tmp;
-			}
+			int r = dist(gen);
+			if (i != r) std::swap(v[i], v[r]);
 		}
 	}
 
@@ -110,7 +103,7 @@ namespace PVX {
 		std::vector<decltype(cvt(Array[0]))> ret(Count);
 		for (auto i = Start; i < Size; i++)
 			ret[i] = cvt(Array[i]);
-		return ret;
+		return std::move(ret);
 	}
 
 	//template<typename T1, typename T2>
@@ -133,7 +126,7 @@ namespace PVX {
 		ret.reserve(Array.size());
 		for (auto i = Start; i < Size; i++)
 			ret.push_back(cvt(Array[i]));
-		return ret;
+		return std::move(ret);
 	}
 
 	template<typename T>
@@ -144,7 +137,7 @@ namespace PVX {
 		for (auto i = Base; i < Count; i++) {
 			ret[i - Base] = fnc(i);
 		}
-		return ret;
+		return std::move(ret);
 	}
 
 	template<typename T1, typename T2>
@@ -162,7 +155,7 @@ namespace PVX {
 	inline auto Map(const std::vector<T1> & Array, T2 fnc) {
 		std::vector<decltype(fnc(Array[0]))> ret(Array.size());
 		std::transform(Array.begin(), Array.end(), ret.begin(), fnc);
-		return ret;
+		return std::move(ret);
 	}
 
 	template<typename T1, typename T2>
@@ -171,20 +164,20 @@ namespace PVX {
 		for (auto & kv : dict) {
 			ret.push_back(kv.first);
 		}
-		return ret;
+		return std::move(ret);
 	}
 	template<typename T>
 	inline std::set<T> ToSet(const std::vector<T>& arr) {
 		std::set<T> ret;
 		for (auto & i : arr)ret.insert(i);
-		return ret;
+		return std::move(ret);
 	}
 
 	template<typename T1, typename T2>
 	inline auto ToSet(const T1 & Array, T2 fnc) {
 		std::set<decltype(fnc(Array[0]))> ret;
 		for (auto & i : Array)ret.insert(fnc(i));
-		return ret;
+		return std::move(ret);
 	}
 
 	template<typename Container, typename result, typename Operation>

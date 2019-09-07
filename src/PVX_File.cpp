@@ -539,7 +539,7 @@ namespace PVX {
 			ofn.nFilterIndex = 0;
 			ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
 			std::string ret;
-			if(GetOpenFileName(&ofn)) {
+			if(GetOpenFileNameA(&ofn)) {
 				ret = ofn.lpstrFile;
 			}
 			delete ofn.lpstrFile;
@@ -585,7 +585,7 @@ namespace PVX {
 			ofn.nFilterIndex = 0;
 			ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
 			std::string ret;
-			if(GetSaveFileName(&ofn)) {
+			if(GetSaveFileNameA(&ofn)) {
 				ret = ofn.lpstrFile;
 			}
 			delete ofn.lpstrFile;

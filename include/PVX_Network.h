@@ -156,7 +156,6 @@ namespace PVX {
 			HttpRequest(const std::string & s);
 			HttpRequest & operator=(const std::string & s);
 			std::vector<unsigned char> RawContent;
-			std::map<std::wstring, UtfHelper> Variables;
 			std::wstring * HasHeader(const std::string & h);
 			PVX::JSON::Item Json() const;
 			WebSocket GetWebSocket();
@@ -167,7 +166,10 @@ namespace PVX {
 			std::wstring SessionId;
 			std::vector<MultipartFromPart> Multipart;
 			std::vector<unsigned char> GetMultiFormData(const MultipartFromPart& part);
+			std::wstring operator[](const std::wstring& Name);
+			long long operator()(const std::wstring & Name);
 		private:
+			std::map<std::wstring, UtfHelper> Variables;
 			void SetMultipartForm(const std::wstring & bound);
 			TcpSocket Socket;
 			HttpServer * Server;
@@ -243,15 +245,6 @@ namespace PVX {
 			std::map<std::wstring, std::wstring> Params;
 		} HttpContext;
 
-		class Controller {
-		protected:
-			friend class HttpServer;
-			std::map<std::wstring, std::function<PVX::JSON::Item(PVX::JSON::Item&, HttpContext&)>> Actions;
-			std::function<void(HttpRequest&, HttpResponse&)> GetHandler() const;
-		public:
-			Controller & AddAction(const std::wstring & Name, std::function<PVX::JSON::Item(PVX::JSON::Item&, HttpContext&)> Action);
-		};
-		
 		class HttpServer {
 		public:
 			HttpServer();
@@ -268,9 +261,6 @@ namespace PVX {
 			void Routes(const std::initializer_list<Route> & routes);
 
 			void AddFilter(std::function<int(HttpRequest&, HttpResponse&)> Filter);
-
-			// Url: /whatever/{Action}/whateve2
-			void Routes(const std::wstring & url, const Controller & ctrl);
 
 
 			void SetDefaultRoute(std::function<void(HttpRequest&, HttpResponse&)> Action);
@@ -295,8 +285,7 @@ namespace PVX {
 			void SetDefaultHeader(HttpResponse &);
 			std::wstring MakeSession();
 
-			std::vector<Controller> Controllers;
-			std::vector<WebSocketServer*> WebSocketServers;
+			std::vector<std::unique_ptr<WebSocketServer>> WebSocketServers;
 			std::vector<Route> Router;
 			Route DefaultRoute;
 			//OpenSSL * SSL;

@@ -173,5 +173,10 @@ namespace PVX::Network {
 		std::wstring * h = 0;
 		return (h = HasHeader("accept-encoding")) && (h->find(L"deflate") != std::wstring::npos);
 	}
-
+	std::wstring HttpRequest::operator[](const std::wstring& Name) {
+		return Variables[Name]();
+	}
+	long long HttpRequest::operator()(const std::wstring& Name) {
+		return _wtoi64(Variables[Name]().c_str());
+	}
 }

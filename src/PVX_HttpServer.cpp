@@ -771,13 +771,6 @@ namespace PVX {
 			}
 		}
 
-		void HttpServer::Routes(const std::wstring & Url, const Controller & ctrl) {
-			Controllers.push_back(ctrl);
-			auto url = Url;
-			if (url.front() != L'/')url = L"/" + url;
-			Routes(url, Controllers.back().GetHandler());
-		}
-
 		void HttpServer::SetDefaultRoute(std::function<void(HttpRequest&, HttpResponse&)> Action) {
 			DefaultRoute.ResetAction(Action);
 		}
@@ -792,8 +785,10 @@ namespace PVX {
 		WebSocketServer & HttpServer::CreateWebSocketServer(const std::wstring & url) {
 			auto Url = url;
 			if (Url.front() != L'/') Url = L"/" + url;
-			auto * ret = new WebSocketServer();
-			WebSocketServers.push_back(ret);
+
+			WebSocketServers.push_back(std::make_unique<WebSocketServer>());
+			auto ret = WebSocketServers.back().get();
+
 			Routes(Url + L".js", ret->GetScriptHandler(Url));
 			Routes(Url, ret->GetHandler());
 			ret->ServingThread.push_back(std::thread([ret]() {
@@ -974,45 +969,5 @@ namespace PVX {
 				}
 			};
 		}
-
-		std::function<void(HttpRequest&, HttpResponse&)> Controller::GetHandler() const {
-			auto Actions = this->Actions;
-			return [Actions](HttpRequest& req, HttpResponse& resp) {
-				HttpContext data{ &req, &resp, resp.Server, 200 };
-				for (auto & p : req.Variables)
-					data.Params[p.first] = p.second();
-
-				auto ActionName = req.Variables.find(L"Action");
-				if (ActionName == req.Variables.end()) {
-					resp.StatusCode = 404;
-					resp.Content.WriteUTF(L"Missing \"{Action}\" parameter in Route.");
-					return;
-				}
-
-				auto Action = Actions.find(ActionName->second());
-
-				if (Action == Actions.end()) {
-					resp.StatusCode = 404;
-					resp.Content.WriteUTF(L"Cannot find action \"" + ActionName->second() + L"\"");
-					return;
-				}
-
-				auto jData = req.Json();
-				auto ret = Action->second(jData, data);
-				resp.Json(ret);
-				resp.StatusCode = data.StatusCode;
-			};
-		}
-
-		Controller &  Controller::AddAction(const std::wstring & Name, std::function<PVX::JSON::Item(PVX::JSON::Item&, HttpContext&)> Action) {
-			Actions[Name] = Action;
-			return *this;
-		}
-
-
-
-
-
-
 	}
 }

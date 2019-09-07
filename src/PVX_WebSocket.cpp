@@ -4,10 +4,6 @@
 #include <PVX.inl>
 #include <assert.h>
 
-namespace External {
-	void SHA1(char *hash_out, const char *str, int len);
-}
-
 namespace PVX::Network {
 	struct WebPacketHeader {
 		int IsLast;
@@ -364,11 +360,9 @@ namespace PVX::Network {
 		for (auto g : txt) msg.push_back(g);
 		for (auto g : GUID) msg.push_back(g);
 
-		std::vector<unsigned char> Out(40);
-		External::SHA1((char*)&Out[0], msg.data(), (int)msg.size());
-		Out.resize(20);
+		auto Out = PVX::Encode::SHA1(msg.data(), msg.size());
 
-		return PVX::Encode::Base64(Out);
+		return PVX::Encode::Base64(Out.data(), 20);
 	}
 	std::function<void(HttpRequest&, HttpResponse&)> WebSocketServer::GetHandler() {
 		return [this](HttpRequest& req, HttpResponse& resp) {

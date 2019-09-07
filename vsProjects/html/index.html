@@ -1,0 +1,15 @@
+<html>
+<head>
+	<script src="/ws.js"></script>
+	<script>
+		pvxWebSockets.Client.runme = function(msg){ 
+			alert(msg); 
+		}
+		pvxWebSockets.connect().then(function(){
+			pvxWebSockets.Server.action({ nikos: "test" }, 123);
+		});
+	</script>
+</head>
+<body>
+</body>
+</html>

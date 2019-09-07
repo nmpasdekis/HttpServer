@@ -13,8 +13,20 @@ int main() {
 			{ L"Message", req[L"action"] } 
 		});
 	});
+	Http.DefaultRouteForContent(L"\\html");
 
-	Http.CreateWebSocketServer(L"ws");
+	auto & ws = Http.CreateWebSocketServer(L"ws");
+
+	ws.AddClientAction("action:arg1,arg2", [&](auto Arguments, auto ConnectionId) {
+		auto arg1 = Arguments[L"arg1"];
+		auto arg2 = Arguments[L"arg2"];
+
+		ws.Run(ConnectionId, L"runme", 123);
+	});
+
+	ws.OnConnect([&](auto ConnectionId, auto Socket) {
+		printf("%s Connected\n", ConnectionId.c_str());
+	});
 
 	ServerSocket.Serve(Http.GetHandler());
 

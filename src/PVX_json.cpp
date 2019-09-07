@@ -138,6 +138,7 @@ namespace PVX {
 		Item::Item(const double& v) : Type{ jsElementType::Number }, NumericFloat{ 1 }, _Double{ v } {}
 		Item::Item(const std::wstring & s) : Type{ jsElementType::String }, NumericFloat{ 0 }, _Integer{ 0 } { String = s; }
 		Item::Item(const wchar_t * s) : Type{ jsElementType::String }, NumericFloat{ 0 }, _Integer{ 0 } { String = s; }
+		Item::Item(const nullptr_t&) : Type{ jsElementType::Null }, NumericFloat{ 0 }, _Integer{ 0 } {}
 		Item::Item(const std::string & s) : Type{ jsElementType::String }, NumericFloat{ 0 }, _Integer{ 0 } { for (auto c : s) String.push_back(c); }
 		Item::Item(const char * str) : Type{ jsElementType::String }, NumericFloat{ 0 }, _Integer{ 0 } { int i = 0; while (str[i]) String.push_back(str[i++]); }
 		//Item::Item(const Item & obj) : Type{ obj.Type }, NumericFloat{ obj.NumericFloat }, _Integer{ obj._Integer }, String{ obj.String }, Object{ obj.Object }, Array{ obj.Array }{}

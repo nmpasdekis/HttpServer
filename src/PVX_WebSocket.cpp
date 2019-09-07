@@ -150,37 +150,75 @@ namespace PVX::Network {
 		Opcode = 2;
 		Content = data;
 	}
+
+	struct PacketHeader{
+		unsigned char Header[10];
+		int HeaderSize;
+	};
+
+	PacketHeader MakePacketHeader(size_t ContentSize, int Opcode) {
+		PacketHeader ret;
+
+		ret.Header[0] = Opcode | 0x80;
+		if (ContentSize < 126) {
+			ret.HeaderSize = 2;
+			ret.Header[1] = ContentSize;
+		} else if (ContentSize <= 0xffff) {
+			ret.HeaderSize = 4;
+			ret.Header[1] = 126;
+			ret.Header[2] = ContentSize >> 8;
+			ret.Header[3] = ContentSize & 0xff;
+		} else {
+			ret.HeaderSize = 10;
+			ret.Header[1] = 127;
+
+			unsigned char* pSz = (unsigned char*)&ContentSize;
+			ret.Header[2] = pSz[7];
+			ret.Header[3] = pSz[6];
+			ret.Header[4] = pSz[5];
+			ret.Header[5] = pSz[4];
+			ret.Header[6] = pSz[3];
+			ret.Header[7] = pSz[2];
+			ret.Header[8] = pSz[1];
+			ret.Header[9] = pSz[0];
+		}
+		return ret;
+	}
+
 	void WebSocketServer::Send(const std::string & ConnectionId, std::function<void(WebSocketPacket&)> Event) {
 		if (!Connections.count(ConnectionId))return;
 		WebSocketPacket Content;
 		Event(Content);
-		size_t sz = Content.Content.size();
-		unsigned char Header[10];
 
-		Header[0] = Content.Opcode | 0x80;
-		int HeaderSize;
-		if (sz < 126) {
-			HeaderSize = 2;
-			Header[1] = sz;
-		} else if (sz <= 0xffff) {
-			HeaderSize = 4;
-			Header[1] = 126;
-			Header[2] = sz >> 8;
-			Header[3] = sz & 0xff;
-		} else {
-			HeaderSize = 10;
-			Header[1] = 127;
+		auto [Header, HeaderSize] = MakePacketHeader(Content.Content.size(), Content.Opcode);
 
-			unsigned char * pSz = (unsigned char*)&sz;
-			Header[2] = pSz[7];
-			Header[3] = pSz[6];
-			Header[4] = pSz[5];
-			Header[5] = pSz[4];
-			Header[6] = pSz[3];
-			Header[7] = pSz[2];
-			Header[8] = pSz[1];
-			Header[9] = pSz[0];
-		}
+		//size_t sz = Content.Content.size();
+		//unsigned char Header[10];
+
+		//Header[0] = Content.Opcode | 0x80;
+		//int HeaderSize;
+		//if (sz < 126) {
+		//	HeaderSize = 2;
+		//	Header[1] = sz;
+		//} else if (sz <= 0xffff) {
+		//	HeaderSize = 4;
+		//	Header[1] = 126;
+		//	Header[2] = sz >> 8;
+		//	Header[3] = sz & 0xff;
+		//} else {
+		//	HeaderSize = 10;
+		//	Header[1] = 127;
+
+		//	unsigned char * pSz = (unsigned char*)&sz;
+		//	Header[2] = pSz[7];
+		//	Header[3] = pSz[6];
+		//	Header[4] = pSz[5];
+		//	Header[5] = pSz[4];
+		//	Header[6] = pSz[3];
+		//	Header[7] = pSz[2];
+		//	Header[8] = pSz[1];
+		//	Header[9] = pSz[0];
+		//}
 		std::vector<std::string> ToDelete;
 		auto & Socket = Connections.at(ConnectionId);
 		if (Socket.Socket.Send(Header, HeaderSize) < 0 || Socket.Socket.Send(Content.Content) < 0)
@@ -191,33 +229,36 @@ namespace PVX::Network {
 	void WebSocketServer::SendGroup(const std::string & GroupName, std::function<void(WebSocketPacket&)> Event) {
 		WebSocketPacket Content;
 		Event(Content);
-		size_t sz = Content.Content.size();
-		unsigned char Header[10];
 
-		Header[0] = Content.Opcode | 0x80;
-		int HeaderSize;
-		if (sz < 126) {
-			HeaderSize = 2;
-			Header[1] = sz;
-		} else if (sz <= 0xffff) {
-			HeaderSize = 4;
-			Header[1] = 126;
-			Header[2] = sz >> 8;
-			Header[3] = sz & 0xff;
-		} else {
-			HeaderSize = 10;
-			Header[1] = 127;
+		auto [Header, HeaderSize] = MakePacketHeader(Content.Content.size(), Content.Opcode);
 
-			unsigned char * pSz = (unsigned char*)&sz;
-			Header[2] = pSz[7];
-			Header[3] = pSz[6];
-			Header[4] = pSz[5];
-			Header[5] = pSz[4];
-			Header[6] = pSz[3];
-			Header[7] = pSz[2];
-			Header[8] = pSz[1];
-			Header[9] = pSz[0];
-		}
+		//size_t sz = Content.Content.size();
+		//unsigned char Header[10];
+
+		//Header[0] = Content.Opcode | 0x80;
+		//int HeaderSize;
+		//if (sz < 126) {
+		//	HeaderSize = 2;
+		//	Header[1] = sz;
+		//} else if (sz <= 0xffff) {
+		//	HeaderSize = 4;
+		//	Header[1] = 126;
+		//	Header[2] = sz >> 8;
+		//	Header[3] = sz & 0xff;
+		//} else {
+		//	HeaderSize = 10;
+		//	Header[1] = 127;
+
+		//	unsigned char * pSz = (unsigned char*)&sz;
+		//	Header[2] = pSz[7];
+		//	Header[3] = pSz[6];
+		//	Header[4] = pSz[5];
+		//	Header[5] = pSz[4];
+		//	Header[6] = pSz[3];
+		//	Header[7] = pSz[2];
+		//	Header[8] = pSz[1];
+		//	Header[9] = pSz[0];
+		//}
 		std::vector<std::string> ToDelete;
 		auto & Group = ConnectionGroups[GroupName];
 		for (auto & ConnectionId : Group) {
@@ -231,33 +272,36 @@ namespace PVX::Network {
 	void WebSocketServer::SendAll(std::function<void(WebSocketPacket&)> Event) {
 		WebSocketPacket Content;
 		Event(Content);
-		size_t sz = Content.Content.size();
-		unsigned char Header[10];
 
-		Header[0] = Content.Opcode | 0x80;
-		int HeaderSize;
-		if (sz < 126) {
-			HeaderSize = 2;
-			Header[1] = sz;
-		} else if (sz <= 0xffff) {
-			HeaderSize = 4;
-			Header[1] = 126;
-			Header[2] = sz >> 8;
-			Header[3] = sz & 0xff;
-		} else {
-			HeaderSize = 10;
-			Header[1] = 127;
+		auto [Header, HeaderSize] = MakePacketHeader(Content.Content.size(), Content.Opcode);
 
-			unsigned char * pSz = (unsigned char*)&sz;
-			Header[2] = pSz[7];
-			Header[3] = pSz[6];
-			Header[4] = pSz[5];
-			Header[5] = pSz[4];
-			Header[6] = pSz[3];
-			Header[7] = pSz[2];
-			Header[8] = pSz[1];
-			Header[9] = pSz[0];
-		}
+		//size_t sz = Content.Content.size();
+		//unsigned char Header[10];
+
+		//Header[0] = Content.Opcode | 0x80;
+		//int HeaderSize;
+		//if (sz < 126) {
+		//	HeaderSize = 2;
+		//	Header[1] = sz;
+		//} else if (sz <= 0xffff) {
+		//	HeaderSize = 4;
+		//	Header[1] = 126;
+		//	Header[2] = sz >> 8;
+		//	Header[3] = sz & 0xff;
+		//} else {
+		//	HeaderSize = 10;
+		//	Header[1] = 127;
+
+		//	unsigned char * pSz = (unsigned char*)&sz;
+		//	Header[2] = pSz[7];
+		//	Header[3] = pSz[6];
+		//	Header[4] = pSz[5];
+		//	Header[5] = pSz[4];
+		//	Header[6] = pSz[3];
+		//	Header[7] = pSz[2];
+		//	Header[8] = pSz[1];
+		//	Header[9] = pSz[0];
+		//}
 		std::vector<std::string> ToDelete;
 		for (auto & con : Connections) {
 			auto & Socket = con.second;
@@ -271,7 +315,11 @@ namespace PVX::Network {
 	void WebSocketServer::SendAllExceptOne(const std::string & Id, std::function<void(WebSocketPacket&)> Event) {
 		WebSocketPacket Content;
 		Event(Content);
-		size_t sz = Content.Content.size();
+
+		auto [Header, HeaderSize] = MakePacketHeader(Content.Content.size(), Content.Opcode);
+
+
+		/*size_t sz = Content.Content.size();
 		unsigned char Header[10];
 
 		Header[0] = Content.Opcode | 0x80;
@@ -297,7 +345,7 @@ namespace PVX::Network {
 			Header[7] = pSz[2];
 			Header[8] = pSz[1];
 			Header[9] = pSz[0];
-		}
+		}*/
 		std::vector<std::string> ToDelete;
 		for (auto & con : Connections) {
 			if (con.first == Id)continue;
@@ -311,7 +359,10 @@ namespace PVX::Network {
 	void WebSocketServer::SendGroupExceptOne(const std::string & Id, const std::string & GroupName, std::function<void(WebSocketPacket&)> Event) {
 		WebSocketPacket Content;
 		Event(Content);
-		size_t sz = Content.Content.size();
+
+		auto [Header, HeaderSize] = MakePacketHeader(Content.Content.size(), Content.Opcode);
+
+		/*size_t sz = Content.Content.size();
 		unsigned char Header[10];
 
 		Header[0] = Content.Opcode | 0x80;
@@ -337,7 +388,7 @@ namespace PVX::Network {
 			Header[7] = pSz[2];
 			Header[8] = pSz[1];
 			Header[9] = pSz[0];
-		}
+		}*/
 		std::vector<std::string> ToDelete;
 		auto & Group = ConnectionGroups[GroupName];
 		for (auto & ConnectionId : Group) {
@@ -350,6 +401,31 @@ namespace PVX::Network {
 			CloseConnection(id);
 	}
 
+	void WebSocketServer::Run(const std::string& ConnectionId, const std::wstring& Function, const PVX::JSON::Item& Params) {
+		Send(ConnectionId, [&](WebSocketPacket& pk) {
+			pk.Run(Function, Params);
+		});
+	}
+	void WebSocketServer::RunGroup(const std::string& GroupName, const std::wstring& Function, const PVX::JSON::Item& Params) {
+		SendGroup(GroupName, [&](WebSocketPacket& pk) {
+			pk.Run(Function, Params);
+		});
+	}
+	void WebSocketServer::RunAll(const std::wstring& Function, const PVX::JSON::Item& Params) {
+		SendAll([&](WebSocketPacket& pk) {
+			pk.Run(Function, Params);
+		});
+	}
+	void WebSocketServer::RunAllExceptOne(const std::string& Id, const std::wstring& Function, const PVX::JSON::Item& Params) {
+		SendAllExceptOne(Id, [&](WebSocketPacket& pk) {
+			pk.Run(Function, Params);
+		});
+	}
+	void WebSocketServer::RunGroupExceptOne(const std::string& Id, const std::string& GroupName, const std::wstring& Function, const PVX::JSON::Item& Params) {
+		SendGroupExceptOne(Id, GroupName, [&](WebSocketPacket& pk) {
+			pk.Run(Function, Params);
+		});
+	}
 
 	static std::string MakeKey(std::wstring txt) {
 		std::string GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
@@ -423,35 +499,38 @@ namespace PVX::Network {
 		}
 		this.SetAngularScope = function(element){t.$scope = angular.element(document.querySelector(element)).scope().$root;};
 		this.connect = function connect() {
-			if (t.ws) {
-				SetState("reconnecting");
-				t.ws.close();
-			}else{
-				SetState("connecting");
-			}
-			let p = window.location.port,pc = window.location.protocol=="http:"?"ws://":"wss://";
-			t.Server.ws = t.ws = new WebSocket(pc + window.location.hostname + (p==80?"":(":"+p)) + server);
-			t.ws.onopen = function(e){
-				t.Id = document.cookie.replace(/\s/g,"").split(";").filter(c => c.indexOf("pvxWSId")==0)[0].substring(8);
-				TO = 1000;
-				t.onopen&&t.onopen(e);
-				SetState("connected");
-			}
-			t.ws.onmessage = function (e) {
-				let action = JSON.parse(e.data);
-				Object.keys(action).forEach(c => t.Client[c]&&t.Client[c](action[c]));
-				if(t.$scope)t.$scope.$applyAsync();
-			}
-			t.ws.onerror = function (e) {
-				t.onerror&&t.onerror(e);
-			}
-			t.ws.onclose = function (e) {
-				if(TO<10000)TO+=500;
-				if(!t.onclose||!t.onclose(e)) setTimeout(function () { 
-					t.connect(); 
-				}, TO);
-				SetState("disconnected");
-			}
+			return new Promise(function(resolve, reject){
+				if (t.ws) {
+					SetState("reconnecting");
+					t.ws.close();
+				}else{
+					SetState("connecting");
+				}
+				let p = window.location.port,pc = window.location.protocol=="http:"?"ws://":"wss://";
+				t.Server.ws = t.ws = new WebSocket(pc + window.location.hostname + (p==80?"":(":"+p)) + server);
+				t.ws.onopen = function(e){
+					t.Id = document.cookie.replace(/\s/g,"").split(";").filter(c => c.indexOf("pvxWSId")==0)[0].substring(8);
+					TO = 1000;
+					t.onopen&&t.onopen(e);
+					SetState("connected");
+					resolve();
+				}
+				t.ws.onmessage = function (e) {
+					let action = JSON.parse(e.data);
+					Object.keys(action).forEach(c => t.Client[c]&&t.Client[c](action[c]));
+					if(t.$scope)t.$scope.$applyAsync();
+				}
+				t.ws.onerror = function (e) {
+					t.onerror&&t.onerror(e);
+				}
+				t.ws.onclose = function (e) {
+					if(TO<10000)TO+=500;
+					if(!t.onclose||!t.onclose(e)) setTimeout(function () { 
+						t.connect(); 
+					}, TO);
+					SetState("disconnected");
+				}
+			});
 		}
 		if(fncs&&fncs.length) for(let f of fncs) t.Server[f.split(":")[0].trim()] = eval(MakeSendFunction(f));
 	}
@@ -463,7 +542,12 @@ namespace PVX::Network {
 			resp.UtfData(ret.str(), L"script/javascript");
 		};
 	}
-
+	/* 
+	ws.AddClientAction("action:arg1,arg2", [&](auto Arguments, auto ConnectionId) {
+		auto arg1 = Arguments[L"arg1"];
+		auto arg2 = Arguments[L"arg2"];
+	});
+	*/
 	void WebSocketServer::AddClientAction(const std::string & Name, std::function<void(PVX::JSON::Item&, const std::string&)> Action) {
 		functions += (functions.size() ? "," : "") + ("\"" + Name + "\"");
 		std::string name;

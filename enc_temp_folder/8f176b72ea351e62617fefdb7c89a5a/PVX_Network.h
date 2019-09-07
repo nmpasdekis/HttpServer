@@ -384,6 +384,7 @@ namespace PVX {
 			void RunAll(const std::wstring& Function, const PVX::JSON::Item& Params = nullptr);
 			void RunAllExceptOne(const std::string& Id, const std::wstring& Function, const PVX::JSON::Item& Params = nullptr);
 			void RunGroupExceptOne(const std::string& Id, const std::string& GroupName, const std::wstring& Function, const PVX::JSON::Item& Params = nullptr);
+
 		};
 
 		class HttpClient {

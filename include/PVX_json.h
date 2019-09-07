@@ -46,6 +46,7 @@ namespace PVX {
 			Item(const enum jsBoolean&);
 			Item(const char*);
 			Item(const wchar_t*);
+			Item(const nullptr_t&);
 			Item(const Item&) = default;
 
 			template<typename T>

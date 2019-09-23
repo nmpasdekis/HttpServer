@@ -127,6 +127,7 @@ namespace PVX {
 				ret.StatusCode = 404;
 				return ret;
 			}
+
 			if (Socket.Send(PVX::Encode::UTF(Header))) {
 				Receive(Socket, ret.Headers, ret.Data, ret.Protocol, ret.StatusCode);
 			}
@@ -150,6 +151,13 @@ namespace PVX {
 		}
 		std::wstring HttpClient::HttpResponse::UtfText() {
 			return PVX::Decode::UTF(Data);
+		}
+
+		static bool NeedUriEncode(const std::wstring& str) {
+			size_t i;
+			auto sz = str.size();
+			for (i = 0; i < sz && str[i]<128; i++);
+			return i < sz;
 		}
 
 		HttpClient::HttpResponse HttpClient::Post(const std::vector<unsigned char> & Data) {
@@ -177,36 +185,97 @@ namespace PVX {
 			return Post(JSON::stringify(Data));
 		}
 
-		static std::wregex url_regex1(LR"__((https?)://([^/\?]+)(?:([^\?]+))?(?:\?(.*))?)__", std::regex_constants::optimize);
-		static std::wregex url_regex2(LR"__(/([^\?/]*))__", std::regex_constants::optimize);
-		static std::wregex url_regex3(LR"__(([^\=\&]+)(?:\=([^\&]*))?\&?)__", std::regex_constants::optimize);
-
-		HttpClient & HttpClient::Url(const std::wstring & src) {
-			using namespace PVX::Encode;
-			auto url = regex_match(src, url_regex1);
-			std::wstring path = url[3];
-			std::wstring query = url[4];
-			auto Path = regex_matches(path, url_regex2);
-			auto Query = regex_matches(query, url_regex3);
-
-			std::string src2 = ToString(url[1]) + "://" + ToString(url[2]);
-			for (auto & p : Path) src2 += "/" + Uri(p[1].str());
-			if (Query.size()) {
-				src2 += "?";
-				for (auto & q : Query) {
-					src2 += Uri(q[1].str());
-					if (q[2].matched) src2 += "=" + Uri(q[2].str());
-				}
-			}
-
-			return Url(src2);
+		HttpClient::HttpResponse HttpClient::Get(const std::string& url) {
+			query = url;
+			return Get();
+		}
+		HttpClient::HttpResponse HttpClient::Post(const std::string& url, const std::vector<unsigned char>& Data) {
+			query = url;
+			return Get();
+		}
+		HttpClient::HttpResponse HttpClient::Post(const std::string& url, const std::wstring& Data) {
+			query = url;
+			return Post(Data);
+		}
+		HttpClient::HttpResponse HttpClient::Post(const std::string& url, const JSON::Item& Data) {
+			query = url;
+			return Post(Data);
 		}
 
-		HttpClient & HttpClient::Url(const std::string & src) {
+		std::string ComponentUri(const std::wstring& url) {
+			using namespace PVX::Encode;
+			if (NeedUriEncode(url)) {
+				std::wstring path = url;
+				auto qPos = url.find(L'?');
+				if (qPos != std::wstring::npos) {
+					return PVX::String::Join(PVX::Map(PVX::String::Split(url.substr(0, qPos), L"/"), [](const std::wstring& s) { return Uri(s); }), "/") + 
+						"?" +	
+						PVX::String::Join(PVX::Map(PVX::String::Split(url.substr(qPos + 1), L"&"), [](const std::wstring& s) {
+							return PVX::String::Join(PVX::Map(PVX::String::Split(s, L"="), [](const std::wstring& s) { return Uri(s); }), "=");
+						}), "&");
+				}
+				return PVX::String::Join(PVX::Map(PVX::String::Split(url, L"/"), [](const std::wstring& s) { return Uri(s); }), "/");
+			}
+			return ToString(url);
+		}
+
+		HttpClient::HttpResponse HttpClient::Get(const std::wstring& url) {
+			query = ComponentUri(url);
+			return Get();
+		}
+		HttpClient::HttpResponse HttpClient::Post(const std::wstring& url, const std::vector<unsigned char>& Data) {
+			query = ComponentUri(url);
+			return Post(Data);
+		}
+		HttpClient::HttpResponse HttpClient::Post(const std::wstring& url, const std::wstring& Data) {
+			query = ComponentUri(url);
+			return Post(Data);
+		}
+		HttpClient::HttpResponse HttpClient::Post(const std::wstring& url, const JSON::Item& Data) {
+			query = ComponentUri(url);
+			return Post(Data);
+		}
+
+
+		HttpClient::HttpClient(const std::string& url): HttpClient() {
+			Url(url);
+		}
+		HttpClient::HttpClient(const std::wstring& url): HttpClient() {
+			Url(url);
+		}
+
+
+
+		static std::wregex url_regex1(LR"__((https?)://([^/\?]+)(?:([^\?]+))?(?:\?(.*))?)__", std::regex_constants::optimize);
+		//static std::wregex url_regex2(LR"__(/([^\?/]*))__", std::regex_constants::optimize);
+		//static std::wregex url_regex3(LR"__(([^\=\&]+)(?:\=([^\&]*))?\&?)__", std::regex_constants::optimize);
+
+
+		void HttpClient::Url(const std::wstring & src) {
+			using namespace PVX::Encode;
+			if (NeedUriEncode(src)) {
+				auto url = regex_match(src, url_regex1);
+
+				std::string src2 = ToString(url[1]) + "://" + ToString(url[2]);
+
+				if (url[3].matched) {
+					src2 += PVX::String::Join(PVX::Map(PVX::String::Split(url[3].str(), L"/"), [](const std::wstring& s) { return Uri(s); }), "/");
+				}
+				if (url[4].matched) {
+					src2 += "?" + PVX::String::Join(PVX::Map(PVX::String::Split(url[4].str(), L"&"), [](const std::wstring& s) {
+						return PVX::String::Join(PVX::Map(PVX::String::Split(s, L"="), [](const std::wstring& s) { return Uri(s); }), "=");
+					}), "&");
+				}
+				Url(src2);
+			} else {
+				Url(ToString(src));
+			}
+		}
+
+		void HttpClient::Url(const std::string & src) {
 			protocol = src.substr(0, src.find("://"));
 
-			for (auto & c : protocol)
-				c &= ~('a'^'A');
+			for (auto & c : protocol) c &= ~('a'^'A');
 
 			if (protocol == "HTTP")
 				port = "80";
@@ -224,9 +293,7 @@ namespace PVX {
 				domain.resize(colon);
 				domain.shrink_to_fit();
 			}
-
 			query = src.substr(l);
-			return *this;
 		}
 
 		HttpClient & HttpClient::OnReceiveHeader(std::function<void(const std::wstring&)> fnc) {
@@ -237,6 +304,16 @@ namespace PVX {
 		HttpClient & HttpClient::OnReceiveData(std::function<void(const std::vector<unsigned char>&)> fnc) {
 			onReceiveData = fnc;
 			return *this;
+		}
+
+		void HttpClient::Headers(const std::map<std::string, std::wstring>& H) {
+			for (auto& [Name, Value]  : H) {
+				headers[Name] = Value;
+			}
+		}
+
+		UtfHelper& HttpClient::operator[](const std::string& Name) {
+			return headers[Name];
 		}
 
 		std::wstring HttpClient::MakeHeader(const char * Verb) {
@@ -261,7 +338,7 @@ namespace PVX {
 			std::transform(s.begin(), s.end(), s.begin(), [](wchar_t c) { return c | ('a'^'A'); });
 		}
 
-		int HttpClient::Receive(PVX::Network::TcpSocket & Socket, std::vector<SimpleTuple> & Headers, std::vector<unsigned char> & Data, std::wstring & Proto, int & Status) {
+		int HttpClient::Receive(PVX::Network::TcpSocket & Socket, std::vector<std::pair<std::wstring, std::wstring>> & Headers, std::vector<unsigned char> & Data, std::wstring & Proto, int & Status) {
 			using namespace PVX;
 			using namespace PVX::String;
 			std::wstring Header;
@@ -279,7 +356,7 @@ namespace PVX {
 				}
 				if (Header.size()) break;
 			}
-			
+			if (!Header.size())return 2;
 			{
 				if (onReceiveHeader != nullptr) onReceiveHeader(Header);
 				auto Lines = Split_No_Empties_Trimed(Header, L"\r\n");
@@ -287,28 +364,28 @@ namespace PVX {
 				Status = _wtoi(Lines[0].substr(Lines[0].find(L' ')).c_str());
 
 				Headers.resize(Lines.size() - 1);
-				//std::transform(Lines._Make_iterator_offset(1), Lines.end(), Headers.begin(), [](const std::wstring & line) {
+
 				std::transform(Lines.begin() + 1, Lines.end(), Headers.begin(), [](const std::wstring & line) {
 					auto ar = Split_No_Empties_Trimed(line, L":");
 					ToLowerInplace(ar[0]);
-					return SimpleTuple{ ar[0], ar[1] };
+					return std::make_pair(ar[0], ar[1]);
 				});
 			}
 			size_t ContentLenght = 0;
 			int IsChunked = 0;
 			int IsDeflated = 0;
 
-			for (auto & h : Headers) {
-				if (h.Name == L"transfer-encoding") {
-					auto h2 = ToLower(h.Value);
+			for (auto & [Name, Value] : Headers) {
+				if (Name == L"transfer-encoding" || Name == L"content-encoding") {
+					auto h2 = ToLower(Value);
 					if (h2.find(L"deflate") != std::wstring::npos) 
 						IsDeflated = 1;
 					if (h2.find(L"chunked") != std::wstring::npos) 
 						IsChunked = 1;
-				} else if (h.Name == L"content-length") {
-					ContentLenght = _wtoi64(h.Value.c_str());
-				} else if (h.Name == L"set-cookie") {
-					auto c = Split_No_Empties_Trimed(h.Value, L";");
+				} else if (Name == L"content-length") {
+					ContentLenght = _wtoi64(Value.c_str());
+				} else if (Name == L"set-cookie") {
+					auto c = Split_No_Empties_Trimed(Value, L";");
 					auto cookie = Split_Trimed(c[0], L"=");
 					Cookies[cookie[0]] = cookie[1];
 				}

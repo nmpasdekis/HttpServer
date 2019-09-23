@@ -60,6 +60,9 @@
     <ClCompile Include="..\src\PVX_SHA1.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\PVX_TcpSocket_Security.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\include\PVX.inl">

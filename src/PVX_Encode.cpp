@@ -448,18 +448,24 @@ namespace PVX {
 			}
 		}
 		std::string UriEncode(const std::string & s) {
-			std::string ret;
-			const char * u = s.c_str();
-			ret.resize(Uri_Length(u));
-			UriEncode(&ret[0], u);
-			return ret;
+			if (s.size()) {
+				std::string ret;
+				const char* u = s.c_str();
+				ret.resize(Uri_Length(u));
+				UriEncode(&ret[0], u);
+				return ret;
+			}
+			return "";
 		}
 		std::string UriEncode(const std::vector<unsigned char> & s) {
-			std::string ret;
-			char * u = (char*)&s[0];
-			ret.resize(Uri_Length(u, s.size()));
-			UriEncode(&ret[0], u, s.size());
-			return ret;
+			if (s.size()) {
+				std::string ret;
+				char* u = (char*)&s[0];
+				ret.resize(Uri_Length(u, s.size()));
+				UriEncode(&ret[0], u, s.size());
+				return ret;
+			}
+			return "";
 		}
 		std::string Uri(const std::wstring & s) {
 			return UriEncode(UTF(s));

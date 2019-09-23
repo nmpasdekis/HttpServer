@@ -70,11 +70,11 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(SolutionDir)include;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)..\include;$(SolutionDir)include;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(SolutionDir)include;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)..\include;$(SolutionDir)include;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -163,6 +163,7 @@
     <ClCompile Include="..\src\PVX_SHA1.cpp" />
     <ClCompile Include="..\src\PVX_String.cpp" />
     <ClCompile Include="..\src\PVX_TcpSocket.cpp" />
+    <ClCompile Include="..\src\PVX_TcpSocket_Security.cpp" />
     <ClCompile Include="..\src\PVX_Threading.cpp" />
     <ClCompile Include="..\src\PVX_WebSocket.cpp" />
   </ItemGroup>

@@ -4,7 +4,16 @@
 #include<stdio.h>
 #include<mutex>
 
+//#include <mstcpip.h>
+//#include <rpc.h>
+//#include <ntdsapi.h>
+
+
+#include <wincrypt.h>
+#include <schnlsp.h>
+
 #pragma comment (lib, "Ws2_32.lib")
+#pragma comment(lib, "fwpuclnt.lib")
 
 
 //#ifdef _DEBUG

@@ -1,6 +1,8 @@
 #ifndef __PVX_NETWORK_H__
 #define __PVX_NETWORK_H__
 
+#define WIN32_LEAN_AND_MEAN
+
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <functional>
@@ -71,6 +73,7 @@ namespace PVX {
 			inline T & GetPrivateData() {
 				return *(T*)PrivateData;
 			}
+			// int SecureConnection();
 		protected:
 			TcpSocket(const SOCKET, const sockaddr &);
 			void * Data, * PrivateData;
@@ -78,6 +81,9 @@ namespace PVX {
 			friend class TcpServer_Old;
 			friend class TcpServer;
 		};
+		
+		void SecureSocket();
+
 
 		class TcpServer_Old : public TcpSocket {
 		public:
@@ -117,17 +123,11 @@ namespace PVX {
 			std::wstring & operator()();
 			operator std::wstring&();
 			operator std::wstring() const;
-			//operator std::string();
-			//operator std::vector<unsigned char>();
 		};
 
 		typedef struct SimpleTuple {
 			std::wstring Name, Value;
 		} SimpleTuple;
-
-		class PVX_Dictionary {
-			std::map<std::string, UtfHelper> Headers;
-		};
 
 		struct MultipartFormPartItem {
 			std::wstring Value;
@@ -254,7 +254,7 @@ namespace PVX {
 			std::function<void(TcpSocket)> GetHandler();
 
 
-			void SetSSL(const std::string & pem);
+			//void SetSSL(const std::string & pem);
 
 			void Routes(const Route & routes);
 			void Routes(const std::wstring & url, std::function<void(HttpRequest&, HttpResponse&)> Action);
@@ -400,27 +400,42 @@ namespace PVX {
 				std::vector<unsigned char> Raw();
 				std::string Text();
 				std::wstring UtfText();
-				std::vector<SimpleTuple> Headers;
+				std::vector<std::pair<std::wstring, std::wstring>> Headers;
 			};
 
 			HttpClient();
+			HttpClient(const std::string& url);
+			HttpClient(const std::wstring& url);
+
 			HttpClient::HttpResponse Get();
 			HttpClient::HttpResponse Post(const std::vector<unsigned char> & Data);
 			HttpClient::HttpResponse Post(const std::wstring & Data);
 			HttpClient::HttpResponse Post(const JSON::Item & Data);
-			HttpClient & Url(const std::wstring & url);
-			HttpClient & Url(const std::string & url);
+
+			HttpClient::HttpResponse Get(const std::string& url);
+			HttpClient::HttpResponse Post(const std::string& url, const std::vector<unsigned char>& Data);
+			HttpClient::HttpResponse Post(const std::string& url, const std::wstring& Data);
+			HttpClient::HttpResponse Post(const std::string& url, const JSON::Item& Data);
+
+			HttpClient::HttpResponse Get(const std::wstring& url);
+			HttpClient::HttpResponse Post(const std::wstring& url, const std::vector<unsigned char>& Data);
+			HttpClient::HttpResponse Post(const std::wstring& url, const std::wstring& Data);
+			HttpClient::HttpResponse Post(const std::wstring& url, const JSON::Item& Data);
+
 			HttpClient & OnReceiveHeader(std::function<void(const std::wstring&)> fnc);
 			HttpClient & OnReceiveData(std::function<void(const std::vector<unsigned char>&)> fnc);
 			std::map<std::wstring, std::wstring> Cookies;
+			void Headers(const std::map<std::string, std::wstring>& h);
+			UtfHelper& operator[](const std::string& Name);
 		protected:
+			void Url(const std::wstring & url);
+			void Url(const std::string & url);
 			std::function<void(const std::wstring&)> onReceiveHeader;
 			std::function<void(const std::vector<unsigned char>&)> onReceiveData;
 			std::string protocol, domain, query, port;
 			std::map<std::string, UtfHelper> headers;
 			std::wstring MakeHeader(const char * Verb);
-			int Receive(PVX::Network::TcpSocket&, std::vector<SimpleTuple> & Headers, std::vector<unsigned char> &, std::wstring & Proto, int & Status);
-
+			int Receive(PVX::Network::TcpSocket&, std::vector<std::pair<std::wstring, std::wstring>> & Headers, std::vector<unsigned char> &, std::wstring & Proto, int & Status);
 		};
 	}
 }

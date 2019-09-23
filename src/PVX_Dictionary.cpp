@@ -1,7 +1,5 @@
-#include "..\Include\PVX_Network.h"
-#include "..\Include\PVX_Network.h"
-#include<PVX_Network.h>
-#include<PVX_Encode.h>
+#include <PVX_Network.h>
+#include <PVX_Encode.h>
 
 using namespace PVX;
 using namespace PVX::Network;

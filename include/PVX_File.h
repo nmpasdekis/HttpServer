@@ -11,32 +11,6 @@
 
 namespace PVX {
 	namespace IO {
-		class TextFile {
-		public:
-			TextFile();
-			~TextFile();
-			TextFile(const char * Filename);
-			size_t Open(const char * Filename);
-			std::string ReadAll();
-			std::string Line(int LineNumber);
-			std::vector<std::string> Lines();
-			std::vector<std::string> Lines(int Start, int Count);
-			int LineCount();
-			void Close();
-			int IsOpen();
-		private:
-			std::string FullPath;
-			struct LineDef {
-				size_t offset;
-				size_t size;
-			};
-			FILE * fin;
-			unsigned int Flags;
-			std::vector<LineDef> _Lines;
-			void GetLineDefs();
-			void ResolvePath(const char * fn);
-		};
-
 		class ChangeTracker {
 			HANDLE hFile;
 			unsigned long long LastTime;
@@ -73,6 +47,8 @@ namespace PVX {
 			size_t ReadLine();
 			std::wstring Line();
 		};
+
+		std::wstring ReadUtf(const std::wstring& Filename);
 
 		class BinReader {
 			struct PrivateData {

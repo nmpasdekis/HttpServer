@@ -12,8 +12,11 @@
 namespace PVX {
 	template<typename T>
 	inline std::vector<T> ToVector(const T * Array, size_t Count) {
-		std::vector<T> ret(Count);
-		memcpy(&ret[0], Array, sizeof(T) * Count);
+		std::vector<T> ret;
+		ret.reserve(Count);
+		for (auto i = 0; i<Count; i++)
+			ret.push_back(Array[i]);
+		//memcpy(&ret[0], Array, sizeof(T) * Count);
 		return std::move(ret);
 	}
 

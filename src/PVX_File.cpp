@@ -15,6 +15,11 @@ namespace PVX_Helpers {
 
 namespace PVX {
 	namespace IO {
+		std::wstring ReadUtf(const std::wstring& Filename) {
+			auto bin = ReadBinary(Filename.c_str());
+			
+			return PVX::Decode::UTF(bin);
+		}
 		size_t FileSize(FILE * fin) {
 			size_t cur = ftell(fin);
 			fseek(fin, 0, SEEK_END);
@@ -169,143 +174,15 @@ namespace PVX {
 		std::string ReplaceExtension(const std::string & Filename, const std::string & NewExtension) {
 			auto spl = PVX::String::Split(Filename, ".");
 			spl.pop_back();
-			spl.push_back(NewExtension);
+			if (NewExtension.size()) spl.push_back(NewExtension);
 			return PVX::String::Join(spl, ".");
 		}
 
 		std::wstring ReplaceExtension(const std::wstring & Filename, const std::wstring & NewExtension) {
 			auto spl = PVX::String::Split(Filename, L".");
 			spl.pop_back();
-			spl.push_back(NewExtension);
+			if(NewExtension.size()) spl.push_back(NewExtension);
 			return PVX::String::Join(spl, L".");
-		}
-
-		void TextFile::ResolvePath(const char * Filename) {
-			char tmp[1024];
-			char * fn;
-			GetFullPathName(Filename, 1023, tmp, &fn);
-			FullPath = tmp;
-		}
-
-		TextFile::TextFile() {
-			fin = 0;
-			Flags = 0;
-		}
-		TextFile::~TextFile() {
-			if(fin)fclose(fin);
-		}
-		TextFile::TextFile(const char * Filename) {
-			Flags = 0;
-			fopen_s(&fin, Filename, "r");
-		}
-		size_t TextFile::Open(const char * Filename) {
-			Flags = 0;
-			if(fin)fclose(fin);
-			fopen_s(&fin, Filename, "r");
-			_Lines.clear();
-			Flags = 0;
-			return fin != 0;
-		}
-		void TextFile::GetLineDefs() {
-			char buffer[512];
-			int sz, i, j;
-			LineDef item = { 0, 0 };
-			size_t save = ftell(fin);
-			fseek(fin, 0, SEEK_SET);
-			sz = 512;
-			while(sz == 512) {
-				sz = fread(buffer, 1, 512, fin);
-				if(!sz)break;
-				i = 0;
-				char * bf = buffer;
-				int sz2 = sz;
-				while(i < sz) {
-					for(j = 0; j < sz2 && bf[j] != '\n'; j++);
-					item.size += j;
-					i += j;
-					if(i < sz) { // Found
-						_Lines.push_back(item);
-						item.offset += item.size + 2;
-						item.size = 0;
-						bf += j + 1;
-						sz2 -= j + 1;
-						i++;
-					}
-				}
-			}
-			_Lines.push_back(item);
-			fseek(fin, save, SEEK_SET);
-			Flags |= 1;
-		}
-		std::string TextFile::ReadAll() {
-			std::string ret;
-			fseek(fin, 0, SEEK_END);
-			ret.resize(ftell(fin));
-			fseek(fin, 0, SEEK_SET);
-			fread(&ret[0], 1, ret.size(), fin);
-			return ret;
-		}
-		std::string TextFile::Line(int LineNumber) {
-			if(!(Flags & 1))
-				GetLineDefs();
-			size_t save = ftell(fin);
-			LineDef & l = _Lines[LineNumber];
-			std::string ret;
-			ret.resize(l.size);
-			fseek(fin, l.offset, SEEK_SET);
-			fread(&ret[0], 1, l.size, fin);
-			fseek(fin, save, SEEK_SET);
-			return ret;
-		}
-		std::vector<std::string> TextFile::Lines() {
-			if(!(Flags & 1))
-				GetLineDefs();
-			size_t save = ftell(fin);
-			std::vector<std::string> ret;
-			int sz = _Lines.size();
-			LineDef * defs = _Lines.data();
-			for(int i = 0; i < sz; i++) {
-				LineDef & l = defs[i];
-				std::string tmp;
-				tmp.resize(l.size);
-				fseek(fin, l.offset, SEEK_SET);
-				fread(&tmp[0], 1, l.size, fin);
-				ret.push_back(tmp);
-			}
-			fseek(fin, save, SEEK_SET);
-			return ret;
-		}
-		std::vector<std::string> TextFile::Lines(int Start, int Count) {
-			if(!(Flags & 1))
-				GetLineDefs();
-			size_t save = ftell(fin);
-			std::vector<std::string> ret;
-			LineDef * defs = _Lines.data();
-			int sz = Start + Count;
-			for(int i = Start; i < sz; i++) {
-				LineDef & l = defs[i];
-				std::string tmp;
-				tmp.resize(l.size);
-				fseek(fin, l.offset, SEEK_SET);
-				fread(&tmp[0], 1, l.size, fin);
-				ret.push_back(tmp);
-			}
-			fseek(fin, save, SEEK_SET);
-			return ret;
-		}
-		int TextFile::LineCount() {
-			if(!(Flags & 1))
-				GetLineDefs();
-			return _Lines.size();
-		}
-		void TextFile::Close() {
-			fclose(fin);
-			fin = 0;
-			Flags = 0;
-			_Lines.clear();
-		}
-		int TextFile::IsOpen() {
-			return fin != 0;
 		}
 
 		std::vector<std::string> Dir(const std::string & Expression) {

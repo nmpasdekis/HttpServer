@@ -48,6 +48,13 @@ namespace PVX::Network {
 		Content << (raw)"--pvx_sep--";
 	}
 
+	int HttpResponse::StreamFile(HttpRequest& req, const std::wstring& Filename, int BufferSize) {
+		auto r = req.GetRanges();
+		if(r.size())
+			return SingleRangeFile(r[0].Start, r[0].End - r[0].Start, Filename, BufferSize);
+		return SingleRangeFile(0, -1, Filename, BufferSize);
+	}
+
 	int HttpResponse::StreamFile(const std::wstring & Filename, int BufferSize, const std::wstring & Mime) {
 		using namespace PVX::IO;
 		SouldCompress = false;

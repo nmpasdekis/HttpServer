@@ -90,7 +90,8 @@ namespace PVX {
 			Item & operator[](const std::wstring&);
 			Item & operator[](const std::string&);
 			Item & operator[](int);
-			Item * Has(const std::wstring &);
+			Item Get(const std::wstring&, const Item& Default=jsElementType::Undefined) const;
+			const Item * Has(const std::wstring &) const;
 
 			Item & operator<<(const std::wstring&);
 
@@ -113,6 +114,7 @@ namespace PVX {
 			std::wstring GetString();
 
 			long long & Integer() { return _Integer; };
+			bool Boolean() { return !!_Integer; };
 			double & Double() { return _Double; };
 
 			long long Integer() const { return NumericFloat? (long long)_Double: _Integer; };
@@ -120,8 +122,12 @@ namespace PVX {
 			std::vector<unsigned char> Data();
 			void Data(const std::vector<unsigned char> & d);
 
-			Item map(std::function<Item(Item&)> Convert);
+			Item map(std::function<Item(const Item&)> Convert);
+			Item map2(std::function<Item(const Item&, int Index)> Convert);
 			void each(std::function<void(Item&)> Func);
+			void each2(std::function<void(Item&, int Index)> Func);
+			void eachInObject(std::function<void(const std::wstring& Name, Item&)> Func);
+			Item GroupBy(std::function<std::wstring(const Item&)> Func);
 			Item filter(std::function<int(const Item&)> Test);
 			Item find(std::function<int(const Item&)> Test, size_t Start=0);
 			int findIndex(std::function<int(const Item&)> Test, size_t Start = 0);
@@ -172,7 +178,6 @@ namespace PVX {
 		};
 
 		std::wstring stringify(const Item&);
-		//Item parse(const wchar_t*);
 		Item parse(const unsigned char*, int size);
 		Item parse(const std::vector<unsigned char> &);
 		Item parse(const std::wstring & Json);

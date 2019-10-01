@@ -1,4 +1,5 @@
 #include<PVX_Encode.h>
+#include <sstream>
 
 using namespace std;
 
@@ -696,19 +697,27 @@ namespace PVX {
 			int sz = Utf.size();
 			return UTF(utf, sz);
 		}
-		wstring UTF(const unsigned char * utf, int sz) {
-			int len = sz;
-			for (int i = 0; i < sz; i++) {
-				len -= ((utf[i] >> 5) == 0x06) || ((utf[i] >> 4) == 0x0e);
-				len -= ((utf[i] >> 4) == 0x0e) << 1;
+		wstring UTF(const unsigned char * Utf, int sz) {
+			unsigned char* utf = (unsigned char*)Utf;
+			if (utf[0] == 0xef && utf[1] == 0xbb && utf[2] == 0xbf) {
+				sz -= 3;
+				utf += 3;
 			}
+			//int len = sz;
+			//for (int i = 0; i < sz; i++) {
+			//	len -= ((utf[i] >> 5) == 0x06) || ((utf[i] >> 4) == 0x0e);
+			//	len -= ((utf[i] >> 4) == 0x0e) << 1;
+			//}
 
-			wstring sb;
-			sb.resize(len);
+			std::wstringstream ret;
+			//wstring sb;
+			//sb.resize(len);
 
-			wchar_t * ret = &sb[0];
+			//wchar_t * ret = &sb[0];
+			int dbg = 0;
 			for (int i = 0; i < sz; i++) {
-				wchar_t & tmp = *ret;
+				//wchar_t & tmp = *ret;
+				wchar_t tmp;
 				char c1 = utf[i];
 				int Count = 0;
 				while (c1 & 0x80) {
@@ -721,9 +730,12 @@ namespace PVX {
 					i++;
 					tmp = (tmp << 6) | (utf[i] & 0x3f);
 				}
-				ret++;
+				//ret++;
+				dbg++;
+				ret << tmp;
 			}
-			return sb;
+			return ret.str();
+			//return sb;
 		}
 		void UTF(wstring & out, const vector<unsigned char> & Utf) {
 			out.clear();

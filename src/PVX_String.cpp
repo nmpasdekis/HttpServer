@@ -145,6 +145,45 @@ namespace PVX{
 			return Replace(Text, std::regex(pattern, std::regex_constants::optimize), newWordFnc);
 		}
 
+		std::wstring Replace(const std::wstring& Text, const std::wregex& pattern, std::function<const std::wstring(const std::wsmatch&)> newWordFnc) {
+			std::vector<wsmatch> matches;
+			std::wstring ret(Text);
+			PVX::onMatch(Text, pattern, [&matches, &Text](const std::wsmatch& m) {
+				matches.push_back(m);
+			}); for (long long i = matches.size() - 1; i >= 0; i--) {
+				ret.replace(matches[i][0].first._Ptr - Text.c_str(), matches[i][0].second._Ptr - matches[i][0].first._Ptr, newWordFnc(matches[i]).c_str());
+			}
+			return ret;
+		}
+		std::wstring Replace(const std::wstring& Text, const std::wstring& pattern, std::function<const std::wstring(const std::wsmatch&)> newWordFnc) {
+			return Replace(Text, std::wregex(pattern, std::regex_constants::optimize), newWordFnc);
+		}
+
+		std::string Replace(const std::string& Text, const std::string& pattern, const std::string& newWord) {
+			std::string ret(Text);
+			auto osz = pattern.size();
+			auto nsz = newWord.size();
+			auto index = ret.find(pattern, 0);
+			while (index != std::string::npos) {
+				ret.replace(index, osz, newWord);
+				index = ret.find(pattern, index + nsz);
+			}
+			return ret;
+		}
+
+		std::wstring Replace(const std::wstring& Text, const std::wstring& pattern, const std::wstring& newWord) {
+			std::wstring ret(Text);
+			auto osz = pattern.size();
+			auto nsz = newWord.size();
+			auto index = ret.find(pattern, 0);
+			while (index != std::string::npos) {
+				ret.replace(index, osz, newWord);
+				index = ret.find(pattern, index + nsz);
+			}
+			return ret;
+		}
+
+
 		std::string ToLower(const std::string & txt) {
 			std::string ret;
 			for (auto & c : txt) ret.push_back(tolower(c));

@@ -26,8 +26,8 @@
 
 #pragma comment(lib, "WSock32.Lib")
 #pragma comment(lib, "Crypt32.Lib")
-#pragma comment(lib, "user32.lib")
-#pragma comment(lib, "MSVCRTD.lib")
+// #pragma comment(lib, "user32.lib")
+// #pragma comment(lib, "MSVCRTD.lib")
 
 // Globals.
 
@@ -37,298 +37,26 @@ DWORD	dwProtocol = SP_PROT_TLS1; // SP_PROT_TLS1; // SP_PROT_PCT1; SP_PROT_SSL2;
 ALG_ID	aiKeyExch = 0; // = default; CALG_DH_EPHEM; CALG_RSA_KEYX;
 
 HCERTSTORE hMyCertStore = NULL;
-HMODULE g_hSecurity = NULL;
 
 SCHANNEL_CRED SchannelCred;
-PSecurityFunctionTableW g_pSSPI;
 
 namespace PVX {
 	namespace Network {
 
-		bool LoadSecurityLibrary(void) {
-			INIT_SECURITY_INTERFACE_W pInitSecurityInterface;
-			g_hSecurity = LoadLibrary("Secur32.dll");
-			pInitSecurityInterface = (INIT_SECURITY_INTERFACE_W)GetProcAddress(g_hSecurity, "InitSecurityInterfaceW");
-			g_pSSPI = pInitSecurityInterface();
-			return true;
-		}
-
-		/*****************************************************************************/
-		static std::string DisplayWinVerifyTrustError(DWORD Status) {
-			switch (Status) {
-				case CERT_E_EXPIRED:                return "CERT_E_EXPIRED";
-				case CERT_E_VALIDITYPERIODNESTING:  return "CERT_E_VALIDITYPERIODNESTING";
-				case CERT_E_ROLE:                   return "CERT_E_ROLE";
-				case CERT_E_PATHLENCONST:           return "CERT_E_PATHLENCONST";
-				case CERT_E_CRITICAL:               return "CERT_E_CRITICAL";
-				case CERT_E_PURPOSE:                return "CERT_E_PURPOSE";
-				case CERT_E_ISSUERCHAINING:         return "CERT_E_ISSUERCHAINING";
-				case CERT_E_MALFORMED:              return "CERT_E_MALFORMED";
-				case CERT_E_UNTRUSTEDROOT:          return "CERT_E_UNTRUSTEDROOT";
-				case CERT_E_CHAINING:               return "CERT_E_CHAINING";
-				case TRUST_E_FAIL:                  return "TRUST_E_FAIL";
-				case CERT_E_REVOKED:                return "CERT_E_REVOKED";
-				case CERT_E_UNTRUSTEDTESTROOT:      return "CERT_E_UNTRUSTEDTESTROOT";
-				case CERT_E_REVOCATION_FAILURE:     return "CERT_E_REVOCATION_FAILURE";
-				case CERT_E_CN_NO_MATCH:            return "CERT_E_CN_NO_MATCH";
-				case CERT_E_WRONG_USAGE:            return "CERT_E_WRONG_USAGE";
-				default:                            return "(unknown)";
-			}
-		}
-
-		/*****************************************************************************/
-		static void DisplayWinSockError(DWORD ErrCode) {
-			const char* pszName = [](DWORD ErrCode) {
-				switch (ErrCode) // http://msdn.microsoft.com/en-us/library/ms740668(VS.85).aspx
-				{
-					case 10035:  return "WSAEWOULDBLOCK    ";
-					case 10036:  return "WSAEINPROGRESS    ";
-					case 10037:  return "WSAEALREADY       ";
-					case 10038:  return "WSAENOTSOCK       ";
-					case 10039:  return "WSAEDESTADDRREQ   ";
-					case 10040:  return "WSAEMSGSIZE       ";
-					case 10041:  return "WSAEPROTOTYPE     ";
-					case 10042:  return "WSAENOPROTOOPT    ";
-					case 10043:  return "WSAEPROTONOSUPPORT";
-					case 10044:  return "WSAESOCKTNOSUPPORT";
-					case 10045:  return "WSAEOPNOTSUPP     ";
-					case 10046:  return "WSAEPFNOSUPPORT   ";
-					case 10047:  return "WSAEAFNOSUPPORT   ";
-					case 10048:  return "WSAEADDRINUSE     ";
-					case 10049:  return "WSAEADDRNOTAVAIL  ";
-					case 10050:  return "WSAENETDOWN       ";
-					case 10051:  return "WSAENETUNREACH    ";
-					case 10052:  return "WSAENETRESET      ";
-					case 10053:  return "WSAECONNABORTED   ";
-					case 10054:  return "WSAECONNRESET     ";
-					case 10055:  return "WSAENOBUFS        ";
-					case 10056:  return "WSAEISCONN        ";
-					case 10057:  return "WSAENOTCONN       ";
-					case 10058:  return "WSAESHUTDOWN      ";
-					case 10059:  return "WSAETOOMANYREFS   ";
-					case 10060:  return "WSAETIMEDOUT      ";
-					case 10061:  return "WSAECONNREFUSED   ";
-					case 10062:  return "WSAELOOP          ";
-					case 10063:  return "WSAENAMETOOLONG   ";
-					case 10064:  return "WSAEHOSTDOWN      ";
-					case 10065:  return "WSAEHOSTUNREACH   ";
-					case 10066:  return "WSAENOTEMPTY      ";
-					case 10067:  return "WSAEPROCLIM       ";
-					case 10068:  return "WSAEUSERS         ";
-					case 10069:  return "WSAEDQUOT         ";
-					case 10070:  return "WSAESTALE         ";
-					case 10071:  return "WSAEREMOTE        ";
-					case 10091:  return "WSASYSNOTREADY    ";
-					case 10092:  return "WSAVERNOTSUPPORTED";
-					case 10093:  return "WSANOTINITIALISED ";
-					case 11001:  return "WSAHOST_NOT_FOUND ";
-					case 11002:  return "WSATRY_AGAIN      ";
-					case 11003:  return "WSANO_RECOVERY    ";
-					case 11004:  return "WSANO_DATA        ";
+		HMODULE Secur32 = 0;
+		PSecurityFunctionTableW SChannel = 0;
+		struct __Secure__ {
+			void Init() {
+				if (!Secur32) {
+					Secur32 = LoadLibrary("Secur32.dll");
+					SChannel = ((INIT_SECURITY_INTERFACE_W)GetProcAddress(Secur32, "InitSecurityInterfaceW"))();
 				}
-			}(ErrCode);
-
-			
-			printf("Error 0x%x (%s)\n", ErrCode, pszName);
-		}
-
-		/*****************************************************************************/
-		std::string DisplaySECError(DWORD ErrCode) {
-			switch (ErrCode) {
-				case SEC_E_BUFFER_TOO_SMALL: return "SEC_E_BUFFER_TOO_SMALL - The message buffer is too small. Used with the Digest SSP.";
-				case SEC_E_CRYPTO_SYSTEM_INVALID: return "SEC_E_CRYPTO_SYSTEM_INVALID - The cipher chosen for the security context is not supported. Used with the Digest SSP.";
-				case SEC_E_INCOMPLETE_MESSAGE: return "SEC_E_INCOMPLETE_MESSAGE - The data in the input buffer is incomplete. The application needs to read more data from the server and call DecryptMessage (General) again.";
-				case SEC_E_INVALID_HANDLE: return "SEC_E_INVALID_HANDLE - A context handle that is not valid was specified in the phContext parameter. Used with the Digest and Schannel SSPs.";
-				case SEC_E_INVALID_TOKEN: return "SEC_E_INVALID_TOKEN - The buffers are of the wrong type or no buffer of type SECBUFFER_DATA was found. Used with the Schannel SSP.";
-				case SEC_E_MESSAGE_ALTERED: return "SEC_E_MESSAGE_ALTERED - The message has been altered. Used with the Digest and Schannel SSPs.";
-				case SEC_E_OUT_OF_SEQUENCE: return "SEC_E_OUT_OF_SEQUENCE - The message was not received in the correct sequence.";
-				case SEC_E_QOP_NOT_SUPPORTED: return "SEC_E_QOP_NOT_SUPPORTED - Neither confidentiality nor integrity are supported by the security context. Used with the Digest SSP.";
-				case SEC_I_CONTEXT_EXPIRED: return "SEC_I_CONTEXT_EXPIRED - The message sender has finished using the connection and has initiated a shutdown.";
-				case SEC_I_RENEGOTIATE: return "SEC_I_RENEGOTIATE - The remote party requires a new handshake sequence or the application has just initiated a shutdown.";
-				case SEC_E_ENCRYPT_FAILURE: return "SEC_E_ENCRYPT_FAILURE - The specified data could not be encrypted.";
-				case SEC_E_DECRYPT_FAILURE: return "SEC_E_DECRYPT_FAILURE - The specified data could not be decrypted.";
 			}
-		}
-
-		/*****************************************************************************/
-		static void DisplayCertChain(PCCERT_CONTEXT  pServerCert, BOOL fLocal) {
-			CHAR szName[1000];
-			PCCERT_CONTEXT pCurrentCert, pIssuerCert;
-			DWORD dwVerificationFlags;
-
-			printf("\n");
-
-			// display leaf name
-			if (!CertNameToStr(pServerCert->dwCertEncodingType,
-				&pServerCert->pCertInfo->Subject,
-				CERT_X500_NAME_STR | CERT_NAME_STR_NO_PLUS_FLAG,
-				szName, sizeof(szName))) {
-				printf("**** Error 0x%x building subject name\n", GetLastError());
+			~__Secure__() {
+				if (Secur32) FreeLibrary(Secur32);
+				Secur32 = NULL;
 			}
-
-			if (fLocal) printf("Client subject: %s\n", szName);
-			else printf("Server subject: %s\n", szName);
-
-			if (!CertNameToStr(pServerCert->dwCertEncodingType,
-				&pServerCert->pCertInfo->Issuer,
-				CERT_X500_NAME_STR | CERT_NAME_STR_NO_PLUS_FLAG,
-				szName, sizeof(szName))) {
-				printf("**** Error 0x%x building issuer name\n", GetLastError());
-			}
-
-			if (fLocal) printf("Client issuer: %s\n", szName);
-			else printf("Server issuer: %s\n\n", szName);
-
-
-			// display certificate chain
-			pCurrentCert = pServerCert;
-			while (pCurrentCert != NULL) {
-				dwVerificationFlags = 0;
-				pIssuerCert = CertGetIssuerCertificateFromStore(pServerCert->hCertStore, pCurrentCert, NULL, &dwVerificationFlags);
-				if (pIssuerCert == NULL) {
-					if (pCurrentCert != pServerCert) CertFreeCertificateContext(pCurrentCert);
-					break;
-				}
-
-				if (!CertNameToStr(pIssuerCert->dwCertEncodingType,
-					&pIssuerCert->pCertInfo->Subject,
-					CERT_X500_NAME_STR | CERT_NAME_STR_NO_PLUS_FLAG,
-					szName, sizeof(szName))) {
-					printf("**** Error 0x%x building subject name\n", GetLastError());
-				}
-
-				printf("CA subject: %s\n", szName);
-
-				if (!CertNameToStr(pIssuerCert->dwCertEncodingType,
-					&pIssuerCert->pCertInfo->Issuer,
-					CERT_X500_NAME_STR | CERT_NAME_STR_NO_PLUS_FLAG,
-					szName, sizeof(szName))) {
-					printf("**** Error 0x%x building issuer name\n", GetLastError());
-				}
-
-				printf("CA issuer: %s\n\n", szName);
-
-				if (pCurrentCert != pServerCert) CertFreeCertificateContext(pCurrentCert);
-				pCurrentCert = pIssuerCert;
-				pIssuerCert = NULL;
-			}
-		}
-
-		/*****************************************************************************/
-		static void DisplayConnectionInfo(CtxtHandle* phContext) {
-
-			SECURITY_STATUS Status;
-			SecPkgContext_ConnectionInfo ConnectionInfo;
-
-			Status = g_pSSPI->QueryContextAttributesW(phContext, SECPKG_ATTR_CONNECTION_INFO, (PVOID)&ConnectionInfo);
-
-			switch (ConnectionInfo.dwProtocol) {
-				case SP_PROT_TLS1_CLIENT:
-					printf("Protocol: TLS1\n");
-					break;
-
-				case SP_PROT_SSL3_CLIENT:
-					printf("Protocol: SSL3\n");
-					break;
-
-				case SP_PROT_PCT1_CLIENT:
-					printf("Protocol: PCT\n");
-					break;
-
-				case SP_PROT_SSL2_CLIENT:
-					printf("Protocol: SSL2\n");
-					break;
-
-				default:
-					printf("Protocol: 0x%x\n", ConnectionInfo.dwProtocol);
-			}
-
-			switch (ConnectionInfo.aiCipher) {
-				case CALG_RC4:
-					printf("Cipher: RC4\n");
-					break;
-
-				case CALG_3DES:
-					printf("Cipher: Triple DES\n");
-					break;
-
-				case CALG_RC2:
-					printf("Cipher: RC2\n");
-					break;
-
-				case CALG_DES:
-				case CALG_CYLINK_MEK:
-					printf("Cipher: DES\n");
-					break;
-
-				case CALG_SKIPJACK:
-					printf("Cipher: Skipjack\n");
-					break;
-
-				default:
-					printf("Cipher: 0x%x\n", ConnectionInfo.aiCipher);
-			}
-
-			printf("Cipher strength: %d\n", ConnectionInfo.dwCipherStrength);
-
-			switch (ConnectionInfo.aiHash) {
-				case CALG_MD5:
-					printf("Hash: MD5\n");
-					break;
-
-				case CALG_SHA:
-					printf("Hash: SHA\n");
-					break;
-
-				default:
-					printf("Hash: 0x%x\n", ConnectionInfo.aiHash);
-			}
-
-			printf("Hash strength: %d\n", ConnectionInfo.dwHashStrength);
-
-			switch (ConnectionInfo.aiExch) {
-				case CALG_RSA_KEYX:
-				case CALG_RSA_SIGN:
-					printf("Key exchange: RSA\n");
-					break;
-
-				case CALG_KEA_KEYX:
-					printf("Key exchange: KEA\n");
-					break;
-
-				case CALG_DH_EPHEM:
-					printf("Key exchange: DH Ephemeral\n");
-					break;
-
-				default:
-					printf("Key exchange: 0x%x\n", ConnectionInfo.aiExch);
-			}
-
-			printf("Key exchange strength: %d\n", ConnectionInfo.dwExchStrength);
-		}
-
-		/*****************************************************************************/
-		static void PrintText(DWORD length, PBYTE buffer) // handle unprintable charaters
-		{
-			int i; //
-
-			printf("\n"); // "length = %d bytes \n", length);
-			for (i = 0; i < (int)length; i++) {
-				if (buffer[i] == 10 || buffer[i] == 13)
-					printf("%c", (char)buffer[i]);
-				else if (buffer[i] < 32 || buffer[i] > 126 || buffer[i] == '%')
-					printf("%c", '.');
-				else
-					printf("%c", (char)buffer[i]);
-			}
-			printf("\n");
-		}
-
-		/*****************************************************************************/
-		void UnloadSecurityLibrary(void) {
-			FreeLibrary(g_hSecurity);
-			g_hSecurity = NULL;
-		}
+		} _Secturity_;
 
 		/*****************************************************************************/
 		static DWORD VerifyServerCertificate(PCCERT_CONTEXT pServerCert, std::wstring ServerName, DWORD dwCertFlags) {
@@ -395,7 +123,6 @@ namespace PVX {
 
 			if (PolicyStatus.dwError) {
 				Status = PolicyStatus.dwError;
-				DisplayWinVerifyTrustError(Status);
 				goto cleanup;
 			}
 
@@ -478,9 +205,7 @@ namespace PVX {
 
 
 			// Create an SSPI credential.
-			Status = g_pSSPI->AcquireCredentialsHandleW(0, (SEC_WCHAR*)UNISP_NAME_W, SECPKG_CRED_OUTBOUND, 0, &SchannelCred, 0, 0, phCreds, &tsExpiry); // (out) Lifetime (optional)
-
-			if (Status != SEC_E_OK) printf("**** Error 0x%x returned by AcquireCredentialsHandle\n", Status);
+			Status = SChannel->AcquireCredentialsHandleW(0, (SEC_WCHAR*)UNISP_NAME_W, SECPKG_CRED_OUTBOUND, 0, &SchannelCred, 0, 0, phCreds, &tsExpiry); // (out) Lifetime (optional)
 
 			// cleanup: Free the certificate context. Schannel has already made its own copy.
 			if (pCertContext) CertFreeCertificateContext(pCertContext);
@@ -497,8 +222,6 @@ namespace PVX {
 
 			Socket = socket(PF_INET, SOCK_STREAM, 0);
 			if (Socket == INVALID_SOCKET) {
-				printf("**** Error %d creating socket\n", WSAGetLastError());
-				DisplayWinSockError(WSAGetLastError());
 				return WSAGetLastError();
 			}
 
@@ -508,8 +231,6 @@ namespace PVX {
 				sin.sin_family = AF_INET;
 				sin.sin_port = htons((u_short)iPortNumber);
 				if ((hp = gethostbyname(pszServerName)) == NULL) {
-					printf("**** Error returned by gethostbyname\n");
-					DisplayWinSockError(WSAGetLastError());
 					return WSAGetLastError();
 				} else
 					memcpy(&sin.sin_addr, hp->h_addr, 4);
@@ -517,9 +238,7 @@ namespace PVX {
 
 
 			if (connect(Socket, (struct sockaddr*)&sin, sizeof(sin)) == SOCKET_ERROR) {
-				printf("**** Error %d connecting to \"%s\" (%s)\n", WSAGetLastError(), pszServerName, inet_ntoa(sin.sin_addr));
 				closesocket(Socket);
-				DisplayWinSockError(WSAGetLastError());
 				return WSAGetLastError();
 			}
 
@@ -548,8 +267,8 @@ namespace PVX {
 			OutBuffer.pBuffers = OutBuffers;
 			OutBuffer.ulVersion = SECBUFFER_VERSION;
 
-			Status = g_pSSPI->ApplyControlToken(phContext, &OutBuffer);
-			if (FAILED(Status)) { printf("**** Error 0x%x returned by ApplyControlToken\n", Status); goto cleanup; }
+			Status = SChannel->ApplyControlToken(phContext, &OutBuffer);
+			if (FAILED(Status)) { goto cleanup; }
 
 
 		// Build an SSL close notify message.
@@ -569,7 +288,7 @@ namespace PVX {
 			OutBuffer.pBuffers = OutBuffers;
 			OutBuffer.ulVersion = SECBUFFER_VERSION;
 
-			Status = g_pSSPI->InitializeSecurityContextW(phCreds,
+			Status = SChannel->InitializeSecurityContextW(phCreds,
 														phContext,
 														NULL,
 														dwSSPIFlags,
@@ -582,7 +301,7 @@ namespace PVX {
 														&dwSSPIOutFlags,
 														&tsExpiry);
 
-			if (FAILED(Status)) { printf("**** Error 0x%x returned by InitializeSecurityContext\n", Status); goto cleanup; }
+			if (FAILED(Status)) { goto cleanup; }
 
 			pbMessage = (PBYTE)OutBuffers[0].pvBuffer;
 			cbMessage = OutBuffers[0].cbBuffer;
@@ -593,18 +312,14 @@ namespace PVX {
 				cbData = send(Socket, (const char*)pbMessage, cbMessage, 0);
 				if (cbData == SOCKET_ERROR || cbData == 0) {
 					Status = WSAGetLastError();
-					printf("**** Error %d sending close notify\n", Status);
-					DisplayWinSockError(WSAGetLastError());
 					goto cleanup;
 				}
-				printf("Sending Close Notify\n");
-				printf("%d bytes of handshake data sent\n", cbData);
-				g_pSSPI->FreeContextBuffer(pbMessage); // Free output buffer.
+				SChannel->FreeContextBuffer(pbMessage); // Free output buffer.
 			}
 
 
 		cleanup:
-			g_pSSPI->DeleteSecurityContext(phContext); // Free the security context.
+			SChannel->DeleteSecurityContext(phContext); // Free the security context.
 			closesocket(Socket); // Close the socket.
 
 			return Status;
@@ -623,7 +338,7 @@ namespace PVX {
 
 
 			// Read list of trusted issuers from schannel.
-			Status = g_pSSPI->QueryContextAttributesW(phContext, SECPKG_ATTR_ISSUER_LIST_EX, (PVOID)&IssuerListInfo);
+			Status = SChannel->QueryContextAttributesW(phContext, SECPKG_ATTR_ISSUER_LIST_EX, (PVOID)&IssuerListInfo);
 
 			// Enumerate the client certificates.
 			ZeroMemory(&FindByIssuerPara, sizeof(FindByIssuerPara));
@@ -655,9 +370,9 @@ namespace PVX {
 				SchannelCred.cCreds = 1;
 				SchannelCred.paCred = &pCertContext;
 
-				Status = g_pSSPI->AcquireCredentialsHandleW(
+				Status = SChannel->AcquireCredentialsHandleW(
 					NULL,                   // Name of principal
-					(SEC_WCHAR*)UNISP_NAME_A,           // Name of package
+					(SEC_WCHAR*)UNISP_NAME_W,           // Name of package
 					SECPKG_CRED_OUTBOUND,   // Flags indicating use
 					NULL,                   // Pointer to logon ID
 					&SchannelCred,          // Package specific data
@@ -666,7 +381,7 @@ namespace PVX {
 					&hCreds,                // (out) Cred Handle
 					&tsExpiry);            // (out) Lifetime (optional)
 				
-				g_pSSPI->FreeCredentialsHandle(phCreds); // Destroy the old credentials.
+				SChannel->FreeCredentialsHandle(phCreds); // Destroy the old credentials.
 
 				*phCreds = hCreds;
 
@@ -730,18 +445,17 @@ namespace PVX {
 				OutBuffer.ulVersion = SECBUFFER_VERSION;
 
 
-				scRet = g_pSSPI->InitializeSecurityContextW(phCreds, phContext, NULL, dwSSPIFlags, 0, SECURITY_NATIVE_DREP, &InBuffer, 0, NULL, &OutBuffer, &dwSSPIOutFlags, &tsExpiry);
+				scRet = SChannel->InitializeSecurityContextW(phCreds, phContext, NULL, dwSSPIFlags, 0, SECURITY_NATIVE_DREP, &InBuffer, 0, NULL, &OutBuffer, &dwSSPIOutFlags, &tsExpiry);
 
 				if (scRet == SEC_E_OK || scRet == SEC_I_CONTINUE_NEEDED || FAILED(scRet) && (dwSSPIOutFlags & ISC_RET_EXTENDED_ERROR)) {
 					if (OutBuffers[0].cbBuffer != 0 && OutBuffers[0].pvBuffer != NULL) {
 						cbData = send(Socket, (char*)(OutBuffers[0].pvBuffer), OutBuffers[0].cbBuffer, 0);
 						if (cbData == SOCKET_ERROR || cbData == 0) {
-							DisplayWinSockError(WSAGetLastError());
-							g_pSSPI->FreeContextBuffer(OutBuffers[0].pvBuffer);
-							g_pSSPI->DeleteSecurityContext(phContext);
+							SChannel->FreeContextBuffer(OutBuffers[0].pvBuffer);
+							SChannel->DeleteSecurityContext(phContext);
 							return SEC_E_INTERNAL_ERROR;
 						}
-						g_pSSPI->FreeContextBuffer(OutBuffers[0].pvBuffer);
+						SChannel->FreeContextBuffer(OutBuffers[0].pvBuffer);
 						OutBuffers[0].pvBuffer = NULL;
 					}
 				}
@@ -781,7 +495,7 @@ namespace PVX {
 			}
 
 			// Delete the security context in the case of a fatal error.
-			if (FAILED(scRet)) g_pSSPI->DeleteSecurityContext(phContext);
+			if (FAILED(scRet)) SChannel->DeleteSecurityContext(phContext);
 			return scRet;
 		}
 
@@ -808,7 +522,7 @@ namespace PVX {
 			OutBuffer.pBuffers = OutBuffers;
 			OutBuffer.ulVersion = SECBUFFER_VERSION;
 
-			scRet = g_pSSPI->InitializeSecurityContextW(
+			scRet = SChannel->InitializeSecurityContextW(
 				phCreds,
 				NULL,
 				(SEC_WCHAR*)ServerName.c_str(),
@@ -826,11 +540,11 @@ namespace PVX {
 			if (OutBuffers[0].cbBuffer != 0 && OutBuffers[0].pvBuffer != NULL) {
 				cbData = send(Socket, (char*)(OutBuffers[0].pvBuffer), OutBuffers[0].cbBuffer, 0);
 				if (cbData == SOCKET_ERROR || cbData == 0) {
-					g_pSSPI->FreeContextBuffer(OutBuffers[0].pvBuffer);
-					g_pSSPI->DeleteSecurityContext(phContext);
+					SChannel->FreeContextBuffer(OutBuffers[0].pvBuffer);
+					SChannel->DeleteSecurityContext(phContext);
 					return SEC_E_INTERNAL_ERROR;
 				}
-				g_pSSPI->FreeContextBuffer(OutBuffers[0].pvBuffer); // Free output buffer.
+				SChannel->FreeContextBuffer(OutBuffers[0].pvBuffer); // Free output buffer.
 				OutBuffers[0].pvBuffer = NULL;
 			}
 
@@ -871,7 +585,7 @@ namespace PVX {
 			Message.ulVersion = SECBUFFER_VERSION;    // Version number
 			Message.cBuffers = 4;                                    // Number of buffers - must contain four SecBuffer structures.
 			Message.pBuffers = Buffers;                        // Pointer to array of buffers
-			scRet = g_pSSPI->EncryptMessage(phContext, 0, &Message, 0); // must contain four SecBuffer structures.
+			scRet = SChannel->EncryptMessage(phContext, 0, &Message, 0); // must contain four SecBuffer structures.
 		
 			return send(Socket, pbIoBuffer, Buffers[0].cbBuffer + Buffers[1].cbBuffer + Buffers[2].cbBuffer, 0);
 
@@ -928,13 +642,12 @@ namespace PVX {
 				Message.ulVersion = SECBUFFER_VERSION;    // Version number
 				Message.cBuffers = 4;                                    // Number of buffers - must contain four SecBuffer structures.
 				Message.pBuffers = Buffers;                        // Pointer to array of buffers
-				scRet = g_pSSPI->DecryptMessage(phContext, &Message, 0, NULL);
+				scRet = SChannel->DecryptMessage(phContext, &Message, 0, NULL);
 				if (scRet == SEC_I_CONTEXT_EXPIRED) break; // Server signalled end of session
 		//      if( scRet == SEC_E_INCOMPLETE_MESSAGE - Input buffer has partial encrypted record, read more
 				if (scRet != SEC_E_OK &&
 					scRet != SEC_I_RENEGOTIATE &&
 					scRet != SEC_I_CONTEXT_EXPIRED) {
-					DisplaySECError((DWORD)scRet);
 					return scRet;
 				}
 
@@ -954,8 +667,7 @@ namespace PVX {
 					length = pDataBuffer->cbBuffer;
 					if (length) // check if last two chars are CR LF
 					{
-						buff = (char*)pDataBuffer->pvBuffer; // printf( "n-2= %d, n-1= %d \n", buff[length-2], buff[length-1] );
-						PrintText(length, (BYTE*)buff);
+						buff = (char*)pDataBuffer->pvBuffer;
 						if (buff[length-2] == 13 && buff[length-1] == 10) break; // printf("Found CRLF\n");
 					}
 				}
@@ -995,7 +707,7 @@ namespace PVX {
 
 
 			// Read stream encryption properties.
-			scRet = g_pSSPI->QueryContextAttributesW(phContext, SECPKG_ATTR_STREAM_SIZES, &Sizes);
+			scRet = SChannel->QueryContextAttributesW(phContext, SECPKG_ATTR_STREAM_SIZES, &Sizes);
 
 
 			// Create a buffer.
@@ -1049,15 +761,15 @@ namespace PVX {
 
 			CredHandle hClientCreds;
 			CtxtHandle hContext;
+			PCCERT_CONTEXT pRemoteCertContext = NULL;
+			SecBuffer  ExtraData;
+
 			BOOL fCredsInitialized = FALSE;
 			BOOL fContextInitialized = FALSE;
 
-			SecBuffer  ExtraData;
 			SECURITY_STATUS Status;
 
-			PCCERT_CONTEXT pRemoteCertContext = NULL;
-
-			LoadSecurityLibrary();
+			_Secturity_.Init();
 			WSAStartup(0x0101, &WsaData);
 
 			CreateCredentials(pszUser, &hClientCreds);
@@ -1068,9 +780,7 @@ namespace PVX {
 
 			fContextInitialized = TRUE;
 
-			Status = g_pSSPI->QueryContextAttributesW(&hContext, SECPKG_ATTR_REMOTE_CERT_CONTEXT, (PVOID)&pRemoteCertContext);
-
-			DisplayCertChain(pRemoteCertContext, FALSE);
+			Status = SChannel->QueryContextAttributesW(&hContext, SECPKG_ATTR_REMOTE_CERT_CONTEXT, (PVOID)&pRemoteCertContext);
 
 			// Attempt to validate server certificate.
 			Status = VerifyServerCertificate(pRemoteCertContext, L"smtp.gmail.com", 0);
@@ -1078,9 +788,6 @@ namespace PVX {
 			// Free the server certificate context.
 			CertFreeCertificateContext(pRemoteCertContext);
 			pRemoteCertContext = NULL;
-
-			// Display connection info.
-			DisplayConnectionInfo(&hContext);
 
 			// Send Request, recover response. LPSTR pszRequest = "EHLO";
 			SMTPsession(Socket, &hClientCreds, &hContext);
@@ -1102,13 +809,13 @@ namespace PVX {
 
 			// Free SSPI context handle.
 			if (fContextInitialized) {
-				g_pSSPI->DeleteSecurityContext(&hContext);
+				SChannel->DeleteSecurityContext(&hContext);
 				fContextInitialized = FALSE;
 			}
 
 			// Free SSPI credentials handle.
 			if (fCredsInitialized) {
-				g_pSSPI->FreeCredentialsHandle(&hClientCreds);
+				SChannel->FreeCredentialsHandle(&hClientCreds);
 				fCredsInitialized = FALSE;
 			}
 
@@ -1121,11 +828,7 @@ namespace PVX {
 			// Close "MY" certificate store.
 			if (hMyCertStore) CertCloseStore(hMyCertStore, 0);
 
-			UnloadSecurityLibrary();
-
-
 			printf("----- All Done ----- \n");
-
 		}
 	}
 }

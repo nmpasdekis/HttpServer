@@ -23,7 +23,15 @@ namespace PVX{
 
 		std::string Replace(const std::string & Text, const std::regex & pattern, std::function<const std::string(const std::smatch&)> newWordFnc);
 		std::string Replace(const std::string & Text, const std::string & pattern, std::function<const std::string(const std::smatch&)> newWordFnc);
-		
+
+		std::wstring Replace(const std::wstring& Text, const std::wregex& pattern, std::function<const std::wstring(const std::smatch&)> newWordFnc);
+		std::wstring Replace(const std::wstring& Text, const std::wstring& pattern, std::function<const std::wstring(const std::smatch&)> newWordFnc);
+
+
+		std::string Replace(const std::string& Text, const std::string& pattern, const std::string& newWord);
+		std::wstring Replace(const std::wstring& Text, const std::wstring& pattern, const std::wstring& newWord);
+
+
 		std::string ToLower(const std::string & txt);
 		std::wstring ToLower(const std::wstring & txt);
 

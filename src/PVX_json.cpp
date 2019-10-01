@@ -313,9 +313,14 @@ namespace PVX {
 			return Array[Index];
 		}
 
-		Item * Item::Has(const std::wstring & Name) {
-			auto ret = Object.find(Name);
-			if (ret != Object.end())
+		Item Item::Get(const std::wstring& Name, const Item& Default) const {
+			if (auto ret = Object.find(Name); ret!=Object.end())
+				return ret->second;
+			return Default;
+		}
+
+		const Item * Item::Has(const std::wstring & Name) const {
+			if (auto ret = Object.find(Name); ret != Object.end())
 				return &(ret->second);
 			return nullptr;
 		}
@@ -403,7 +408,7 @@ namespace PVX {
 			String = PVX::Encode::ToString(PVX::Encode::Base64(d));
 		}
 
-		Item Item::map(std::function<Item(Item&)> Convert) {
+		Item Item::map(std::function<Item(const Item&)> Convert) {
 			if (Type == JSON::jsElementType::Array) {
 				Item ret = JSON::jsElementType::Array;
 				for (auto & i : Array) {
@@ -414,8 +419,38 @@ namespace PVX {
 			return jsElementType::Undefined;
 		}
 
+		Item Item::map2(std::function<Item(const Item&, int Index)> Convert) {
+			if (Type == JSON::jsElementType::Array) {
+				Item ret = JSON::jsElementType::Array;
+				int Index = 0;
+				for (auto& i : Array) {
+					ret.Array.push_back(Convert(i, Index++));
+				}
+				return ret;
+			}
+			return jsElementType::Undefined;
+		}
+
 		void Item::each(std::function<void(Item&)> Func) {
 			if (Type == JSON::jsElementType::Array) for (auto & i : Array) Func(i);
+		}
+		void Item::each2(std::function<void(Item&, int Index)> Func) {
+			int Index = 0;
+			if (Type == JSON::jsElementType::Array) for (auto& i : Array) Func(i, Index++);
+		}
+		void Item::eachInObject(std::function<void(const std::wstring& Name, Item&)> Func) {
+			if (Type!=jsElementType::Object)return;
+			for (auto& [Name, Value] : Object) Func(Name, Value);
+		}
+		Item Item::GroupBy(std::function<std::wstring(const Item&)> Func) {
+			if (Type!=jsElementType::Array) return jsElementType::Undefined;
+			Item ret = jsElementType::Object;
+			each([&](const Item& it) {
+				std::wstring Name = Func(it);
+				if (!ret.Has(Name)) ret[Name] = jsElementType::Array;
+				ret[Name].push(it);
+			});
+			return ret;
 		}
 
 		Item Item::filter(std::function<int(const Item&)> Test) {
@@ -533,55 +568,69 @@ namespace PVX {
 			return *this;
 		}
 
-		std::wstring stringify(const Item & obj) {
+		std::wstring lvl(int l) {
+			return L"\n" + std::wstring(l, L'\t');
+		}
+		
+		std::wstring stringify(const Item& obj, int level) {
 			std::wstringstream ret;
 			switch (obj.Type) {
-			case jsElementType::Undefined:
-				return L"undefined";
-			case jsElementType::Null:
-				return L"null";
-			case jsElementType::Number:
-				if (obj.NumericFloat) {
-					ret << obj.Double();
-				} else {
-					ret << obj.Integer();
-				}
-				return ret.str();
-			case jsElementType::Boolean:
-				return obj.Integer() ? L"true" : L"false";
-			case jsElementType::String:
-				return JsonString(obj.String);
-			case jsElementType::Array:
-				ret << "[";
-				if (obj.Array.size()) {
-					ret << stringify(obj.Array[0]);
-					for (auto i = 1; i < obj.Array.size(); i++) {
-						ret << ", " << stringify(obj.Array[i]);
+				case jsElementType::Undefined:
+					return L"undefined";
+				case jsElementType::Null:
+					return L"null";
+				case jsElementType::Number:
+					if (obj.NumericFloat) {
+						ret << obj.Double();
+					} else {
+						ret << obj.Integer();
 					}
-				}
-				ret << "]";
-				return ret.str();
-			case jsElementType::Object:
-			{
-				ret << "{";
-				auto iter = obj.Object.begin();
+					return ret.str();
+				case jsElementType::Boolean:
+					return obj.Integer() ? L"true" : L"false";
+				case jsElementType::String:
+					return JsonString(obj.String);
+				case jsElementType::Array:
+					ret << "[";
+					if (obj.Array.size()) {
+						size_t i = 0;
+						while (i< obj.Array.size() && obj.Array[i].Type==jsElementType::Undefined)i++;
+						ret << lvl(level + 1) << stringify(obj.Array[i], level + 1); i++;
+						while (i< obj.Array.size() && obj.Array[i].Type==jsElementType::Undefined)i++;
+						for (; i < obj.Array.size(); i++) {
+							ret << "," << lvl(level + 1) << stringify(obj.Array[i], level + 1);
+							while (i< obj.Array.size() && obj.Array[i].Type==jsElementType::Undefined)i++;
+						}
+					}
+					ret << lvl(level) << "]";
+					return ret.str();
+				case jsElementType::Object:
+				{
+					ret << "{";
+					auto iter = obj.Object.begin();
 
-				if (iter != obj.Object.end() && iter->second.Type != jsElementType::Undefined) {
-					ret << JsonString(iter->first) << ":" << stringify(iter->second);
-					++iter;
-				}
+					while (iter!=obj.Object.end() && iter->second.Type == jsElementType::Undefined) iter++;
 
-				for (; iter != obj.Object.end(); ++iter) {
-					if (iter->second.Type != jsElementType::Undefined)
-						ret << ", " << JsonString(iter->first) << ":" << stringify(iter->second);
-				}
+					if (iter != obj.Object.end()) {
+						ret << lvl(level + 1) << JsonString(iter->first) << ": " << stringify(iter->second, level + 1);
+						++iter;
+					}
 
-				ret << "}";
-				return ret.str();
+					for (; iter != obj.Object.end(); ++iter) {
+						if (iter->second.Type != jsElementType::Undefined)
+							ret << "," << lvl(level + 1) << JsonString(iter->first) << ": " << stringify(iter->second, level + 1);
+					}
+
+					ret << lvl(level) << "}";
+					return ret.str();
+				}
+				default:
+					return L"";
 			}
-			default:
-				return L"";
-			}
+		}
+
+		std::wstring stringify(const Item & obj) {
+			return stringify(obj, 0);
 		}
 
 //#define ISSPACE(x) ((x)==' '||(x)=='\t'||(x)=='\n'||(x)=='\r')
@@ -723,6 +772,7 @@ namespace PVX {
 //		}
 
 		Item parse(const unsigned char * data, int size) {
+			if(!size)return jsElementType::Undefined;
 			return parse(Decode::UTF(data, size).c_str());
 		}
 		Item parse(const std::vector<unsigned char>& d) {
@@ -753,7 +803,9 @@ namespace PVX {
 			} else obj = jsElementType::Undefined;
 		}
 		void MakeArray(Item & obj, const jsonStack & s) {
-			if (s.op == ',') for (auto i = s.Child.size() - 1; i >= 0;i--) MakeArray(obj, s.Child[i]);
+			if (s.op == ',') 
+				for (long long i = long long(s.Child.size()) - 1; i >= 0;i--) 
+					MakeArray(obj, s.Child[i]);
 			else obj.push(s.val);
 		}
 
@@ -815,7 +867,7 @@ namespace PVX {
 				case '"': Output.push_back({ Strings[strings++], 0 }); ItemCount++; break;
 				case 'i': Output.push_back({ Integers[ints++], 0 }); ItemCount++; break;
 				case 'f': Output.push_back({ Doubles[floats++], 0 }); ItemCount++; break;
-				case 'b': Output.push_back({ Booleans[bools++]?jsBoolean::True:jsBoolean::False, 0 }); ItemCount++; break;
+				case 'b': Output.push_back({ Booleans[bools++] ? jsBoolean::True : jsBoolean::False, 0 }); Output.back().val.Type = jsElementType::Boolean; ItemCount++; break;
 				case '0': Output.push_back({ jsElementType::Null, 0 }); ItemCount++;  break;
 				case '{': Stack.push_back('{'); ItemCount = 0; break;
 				case '[': Stack.push_back('['); ItemCount = 0; break;

@@ -73,6 +73,8 @@ namespace PVX {
 			inline T & GetPrivateData() {
 				return *(T*)PrivateData;
 			}
+			std::string RemoteAddress() const;
+			std::wstring wRemoteAddress() const;
 			// int SecureConnection();
 		protected:
 			TcpSocket(const SOCKET, const sockaddr &);
@@ -168,10 +170,10 @@ namespace PVX {
 			std::vector<unsigned char> GetMultiFormData(const MultipartFromPart& part);
 			std::wstring operator[](const std::wstring& Name);
 			long long operator()(const std::wstring & Name);
+			TcpSocket Socket;
 		private:
 			std::map<std::wstring, UtfHelper> Variables;
 			void SetMultipartForm(const std::wstring & bound);
-			TcpSocket Socket;
 			HttpServer * Server;
 			int SetHeader(const std::string & s);
 			friend class HttpServer;
@@ -196,7 +198,8 @@ namespace PVX {
 			void BeginRange(size_t Size);
 			void AddRange(const std::wstring & ContentType, size_t Offset, const std::vector<unsigned char> & Data);
 			void EndRange();
-			int StreamFile(const std::wstring & Filename, int BufferSize = 0xffff, const std::wstring & Mime=L"");
+			int StreamFile(const std::wstring& Filename, int BufferSize = 0xffff, const std::wstring & Mime = L"");
+			int StreamFile(HttpRequest& Request, const std::wstring& Filename, int BufferSize = 0xffff);
 			int ServeFile(const std::wstring & Filename, const std::wstring & Mime = L"");
 
 			int SingleRangeFile(size_t Offset, size_t Size, const std::wstring & Filename, int FragmentSize=0x00100000);
@@ -253,26 +256,17 @@ namespace PVX {
 
 			std::function<void(TcpSocket)> GetHandler();
 
-
-			//void SetSSL(const std::string & pem);
-
 			void Routes(const Route & routes);
 			void Routes(const std::wstring & url, std::function<void(HttpRequest&, HttpResponse&)> Action);
 			void Routes(const std::initializer_list<Route> & routes);
 
 			void AddFilter(std::function<int(HttpRequest&, HttpResponse&)> Filter);
 
-
 			void SetDefaultRoute(std::function<void(HttpRequest&, HttpResponse&)> Action);
 			void Start();
 			void Stop();
 			WebSocketServer & CreateWebSocketServer(const std::wstring & Url);
 			const std::wstring & GetMime(const std::wstring & extension) const;
-
-			//Controller & CreateController(const std::wstring & Url);
-
-			// Content
-
 
 			// Route must contain {Path} Variable
 			std::function<void(HttpRequest&, HttpResponse&)> ContentServer(const std::wstring & ContentPath = L"");

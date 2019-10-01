@@ -123,6 +123,22 @@ namespace PVX {
 			((PVX_SocketData*)Data)->Ref++;
 			return *this;
 		}
+		std::string TcpSocket::RemoteAddress() const {
+			auto& addr = ((PVX_SocketData*)Data)->Address;
+			return 
+				std::to_string(addr.sa_data[2]) + "." +
+				std::to_string(addr.sa_data[3]) + "." +
+				std::to_string(addr.sa_data[4]) + "." +
+				std::to_string(addr.sa_data[5]);
+		}
+		std::wstring TcpSocket::wRemoteAddress() const {
+			auto& addr = ((PVX_SocketData*)Data)->Address;
+			return
+				std::to_wstring(addr.sa_data[2]) + L"." +
+				std::to_wstring(addr.sa_data[3]) + L"." +
+				std::to_wstring(addr.sa_data[4]) + L"." +
+				std::to_wstring(addr.sa_data[5]);
+		}
 		TcpSocket::TcpSocket(const SOCKET s, const sockaddr & addr) {
 			PVX_Socket_RefCount++;
 			Data = new PVX_SocketData{ 1, s, 1, addr };

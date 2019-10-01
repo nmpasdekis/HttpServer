@@ -670,15 +670,15 @@ namespace PVX {
 
 		HttpServer::HttpServer(const std::wstring & ConfigFile) : DefaultRoute{ L"/{Path}", ContentServer() } {
 			auto Config = PVX::IO::LoadJson(ConfigFile.c_str());
-			JSON::Item * it;
-			if (it = Config.Has(L"Mime"))
+
+			if (auto it = Config.Has(L"Mime"); it)
 				for (auto & [Key, Value] : it->Object)
 					Mime[Key] = Value.String;
 
-			if (it = Config.Has(L"ContentDir"))
+			if (auto it = Config.Has(L"ContentDir"); it)
 				SetDefaultRoute(ContentServer(it->String));
 
-			if (it = Config.Has(L"ResponseHeader"))
+			if (auto it = Config.Has(L"ResponseHeader"); it)
 				for (auto & Value : it->Object)
 					DefaultHeader.push_back({ Value.first, Value.second.String });
 		}
@@ -731,8 +731,9 @@ namespace PVX {
 			Action = action;
 		}
 
-		int GetRequest(TcpSocket & s, HttpRequest & http, std::vector<uchar> & Content) {
+		int GetRequest(TcpSocket& s, HttpRequest& http, std::vector<uchar>& Content) {
 			int EoH = -1;
+			http.Socket = s;
 			while (s.Receive(http.RawHeader) > 0 &&
 				(EoH = http.RawHeader.find("\r\n\r\n")) == -1);
 			if (EoH != -1) {
@@ -757,6 +758,34 @@ namespace PVX {
 			}
 			return 0;
 		}
+
+
+		//int GetRequest(TcpSocket & s, HttpRequest & http, std::vector<uchar> & Content) {
+		//	int EoH = -1;
+		//	while (s.Receive(http.RawHeader) > 0 &&
+		//		(EoH = http.RawHeader.find("\r\n\r\n")) == -1);
+		//	if (EoH != -1) {
+		//		size_t contentLength = 0;
+		//		size_t sz = EoH + 4;
+
+		//		if (http.RawHeader.size() > sz) {
+		//			Content.resize(http.RawHeader.size() - sz);
+		//			memcpy(&Content[0], &http.RawHeader[EoH + 4], Content.size());
+		//		}
+		//		http.RawHeader.resize(sz);
+
+		//		http = http.RawHeader;
+		//		auto cc = http.Headers.find("content-length");
+		//		if (cc != http.Headers.end()) {
+		//			contentLength = _wtoi(cc->second->c_str());
+		//			Content.reserve(contentLength);
+
+		//			while (Content.size() < contentLength && s.Receive(Content) > 0);
+		//		}
+		//		return contentLength == Content.size();
+		//	}
+		//	return 0;
+		//}
 		void HttpServer::Routes(const Route & r) {
 			Router.push_back(r);
 		}

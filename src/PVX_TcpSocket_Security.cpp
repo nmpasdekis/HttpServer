@@ -755,6 +755,17 @@ namespace PVX {
 		}
 
 		/*****************************************************************************/
+
+
+
+		class SecureChannel {
+			CredHandle ClientCreds;
+			CtxtHandle Context;
+			PCCERT_CONTEXT RemoteCertContext = NULL;
+			SecBuffer  ExtraData;
+		};
+
+
 		void SecureSocket() {
 			WSADATA WsaData;
 			SOCKET  Socket = INVALID_SOCKET;

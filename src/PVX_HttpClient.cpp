@@ -1,7 +1,7 @@
 #include <PVX_Network.h>
 #include <PVX_Encode.h>
 #include <sstream>
-#include <PVX_StdString.h>
+#include <PVX_String.h>
 #include <PVX.inl>
 #include <zlib.h>
 #include <PVX_Deflate.h>

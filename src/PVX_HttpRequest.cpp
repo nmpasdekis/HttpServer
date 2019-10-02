@@ -1,5 +1,5 @@
 #include <PVX_Network.h>
-#include <PVX_StdString.h>
+#include <PVX_String.h>
 #include <PVX.inl>
 #include <PVX_Encode.h>
 #include <PVX_Regex.h>

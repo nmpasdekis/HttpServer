@@ -4,7 +4,7 @@
 #include<regex>
 #include<map>
 #include <PVX_Deflate.h>
-#include<PVX_StdString.h>
+#include<PVX_String.h>
 #include<chrono>
 
 using namespace std::chrono_literals;

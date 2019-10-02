@@ -1,6 +1,6 @@
 #include <PVX_Network.h>
 #include <PVX_Encode.h>
-#include <PVX_StdString.h>
+#include <PVX_String.h>
 #include <PVX.inl>
 #include <assert.h>
 

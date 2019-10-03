@@ -179,4 +179,10 @@ namespace PVX::Network {
 	long long HttpRequest::operator()(const std::wstring& Name) {
 		return _wtoi64(Variables[Name]().c_str());
 	}
+
+	std::map<std::wstring, std::wstring> HttpRequest::GetVariableMap() const {
+		std::map<std::wstring, std::wstring> ret;
+		for (auto& [n, v] : Variables) ret[n] = v;
+		return ret;
+	}
 }

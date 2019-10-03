@@ -171,6 +171,7 @@ namespace PVX {
 			std::wstring operator[](const std::wstring& Name);
 			long long operator()(const std::wstring & Name);
 			TcpSocket Socket;
+			std::map<std::wstring, std::wstring> GetVariableMap() const;
 		private:
 			std::map<std::wstring, UtfHelper> Variables;
 			void SetMultipartForm(const std::wstring & bound);

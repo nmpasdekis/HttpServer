@@ -1,15 +1,27 @@
 <html>
 <head>
+	<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.7.8/angular.min.js"></script>
 	<script src="/ws.js"></script>
 	<script>
-		pvxWebSockets.Client.runme = function(msg){ 
-			alert(msg); 
-		}
-		pvxWebSockets.connect().then(function(){
-			pvxWebSockets.Server.action({ nikos: "test" }, 123);
-		});
+		angular.module("app", []).controller("ctrl", ["$scope", "$http", function ($scope, $http) {
+			//pvxWebSockets.SetAngularScope("body");
+			$scope.data = null;
+			$scope.GetData = function () {
+				$http.post("/api/test").then(function (r) {
+					$scope.data = r.data;
+				});
+			}
+			$scope.GetData();
+			pvxWebSockets.Client.Updated = function (data) {
+				$scope.data = data;
+			}
+			pvxWebSockets.connect().then(function () {
+				//pvxWebSockets.Server.action();
+			});
+		}]);
 	</script>
 </head>
-<body>
+<body ng-app="app" ng-controller="ctrl">
+	<pre>{{data|json}}</pre>
 </body>
 </html>

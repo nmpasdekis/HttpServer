@@ -462,6 +462,9 @@
   <ItemGroup>
     <None Include="zlibvc.def" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="zconf.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

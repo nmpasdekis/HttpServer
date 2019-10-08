@@ -212,6 +212,7 @@ namespace PVX {
 			void SetCookie(const std::wstring & Name, const std::wstring & Value);
 			void ClearCookie(const std::wstring & Name);
 			int SendHeader(size_t ContentLength = 0);
+			void AllowOrigin(HttpRequest& req, const std::set<std::wstring>& Allow = {});
 		protected:
 			TcpSocket Socket;
 			size_t RangeSize;

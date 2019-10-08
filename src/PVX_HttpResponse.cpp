@@ -293,4 +293,10 @@ namespace PVX::Network {
 		return Socket.Send(Response.GetDataVector()) < 0;
 	}
 
+	void HttpResponse::AllowOrigin(HttpRequest& req, const std::set<std::wstring>& Allow) {
+		std::wstring origin = req.Headers["origin"];
+		if (!Allow.size()||Allow.find(origin)!=Allow.end())
+			(*this)[L"Access-Control-Allow-Origin"] = origin;
+	}
+
 }

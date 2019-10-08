@@ -1,6 +1,7 @@
 #include <PVX_Network.h>
 #include <PVX.inl>
 #include <PVX_Encode.h>
+#include <PVX_File.h>
 
 using namespace PVX::Network;
 
@@ -8,20 +9,40 @@ int main() {
 	TcpServer ServerSocket("8080");
 	HttpServer Http;
 
-	Http.Routes(L"/api/{action}", [](HttpRequest& req, HttpResponse & resp) {
-		resp.Json({ 
-			{ L"Message", req[L"action"] } 
-		});
+	PVX::JSON::Item actions;
+	PVX::IO::ChangeEventer Eventer;
+
+	auto& ws = Http.CreateWebSocketServer(L"ws");
+
+	Eventer.Track(L"api.json", [&actions, &ws]() { 
+		actions = PVX::IO::LoadJson("api.json");
+		ws.RunAll(L"Updated", actions["test"]);
+	});
+
+	Http.AddFilter([](HttpRequest& req, HttpResponse& resp) {
+		if (req.Method=="OPTIONS") {
+			return 0;
+		}
+		resp.AllowOrigin(req);
+		//resp[L"Access-Control-Allow-Credentials"] = L"true";
+		//resp[L"Access-Control-Allow-Methods"] = L"GET, POST, PUT, DELETE, OPTIONS";
+		//resp[L"Access-Control-Allow-Headers"] = L"Origin, X-Requested-With, Content-Type, Accept, Authorization";
+		return 1;
+	});
+
+	Http.Routes(L"/api/{action}", [&actions](HttpRequest& req, HttpResponse & resp) {
+		if (auto& act = *actions.Has(req[L"action"]); &act) {
+			resp.Json(act);
+			return;
+		}
+		resp.StatusCode = 404;
+		resp.Html("<h3>Endpoint not found</h3>");
 	});
 	Http.DefaultRouteForContent(L"\\html");
 
-	auto & ws = Http.CreateWebSocketServer(L"ws");
 
-	ws.AddClientAction("action:arg1,arg2", [&](auto Arguments, auto ConnectionId) {
-		auto arg1 = Arguments[L"arg1"];
-		auto arg2 = Arguments[L"arg2"];
-
-		ws.Run(ConnectionId, L"runme", 123);
+	ws.AddClientAction("action", [&](auto Arguments, auto ConnectionId) {
+		ws.Run(ConnectionId, L"Updated");
 	});
 
 	ws.OnConnect([&](auto ConnectionId, auto Socket) {

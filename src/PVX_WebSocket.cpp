@@ -499,6 +499,7 @@ namespace PVX::Network {
 		}
 		this.SetAngularScope = function(element){t.$scope = angular.element(document.querySelector(element)).scope().$root;};
 		this.connect = function connect() {
+			if(angular)this.SetAngularScope("[ng-controller]");
 			return new Promise(function(resolve, reject){
 				if (t.ws) {
 					SetState("reconnecting");
@@ -506,7 +507,7 @@ namespace PVX::Network {
 				}else{
 					SetState("connecting");
 				}
-				let p = window.location.port,pc = window.location.protocol=="http:"?"ws://":"wss://";
+				let p = window.location.port,pc = window.location.protocol=="https:"?"wss://":"ws://";
 				t.Server.ws = t.ws = new WebSocket(pc + window.location.hostname + (p==80?"":(":"+p)) + server);
 				t.ws.onopen = function(e){
 					t.Id = document.cookie.replace(/\s/g,"").split(";").filter(c => c.indexOf("pvxWSId")==0)[0].substring(8);

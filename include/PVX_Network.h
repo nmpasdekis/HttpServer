@@ -15,6 +15,7 @@
 #include <map>
 #include <PVX_DataBuilder.h>
 #include <PVX_Threading.h>
+#include <shared_mutex>
 
 // C:\Users\PerVertEX\Google Drive\C++ Projects 2016\Libraries64\OpenSSL\bin64
 
@@ -284,7 +285,6 @@ namespace PVX {
 			std::vector<std::unique_ptr<WebSocketServer>> WebSocketServers;
 			std::vector<Route> Router;
 			Route DefaultRoute;
-			//OpenSSL * SSL;
 			std::map<std::wstring, std::wstring> Mime;
 			std::vector<SimpleTuple> DefaultHeader;
 			std::vector<std::function<int(HttpRequest&, HttpResponse&)>> Filters;
@@ -349,6 +349,7 @@ namespace PVX {
 		class WebSocketServer {
 		protected:
 			friend class HttpServer;
+			std::shared_mutex ConnectionMutex;
 			std::function<void(const std::string&, WebSocket&)> onConnect;
 			std::function<void(const std::string&)> onDisconnect;
 			std::map<std::string, std::function<void(WebSocketPacket&)>> ServerActions;
@@ -357,7 +358,8 @@ namespace PVX {
 			std::map<std::string, std::set<std::string>> GroupConnections, ConnectionGroups;
 			std::function<void(HttpRequest&, HttpResponse&)> GetHandler();
 			std::function<void(HttpRequest&, HttpResponse&)> GetScriptHandler(const std::wstring & Url);
-			std::vector<std::thread> ServingThread;
+			//std::vector<std::thread> ServingThread;
+			std::map<std::string, std::thread> ServingThreads;
 			std::map<std::string, WebSocket> Connections;
 			std::string functions;
 			void CloseConnection(const std::string& ConnectionId);

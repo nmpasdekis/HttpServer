@@ -186,219 +186,110 @@ namespace PVX::Network {
 	}
 
 	void WebSocketServer::Send(const std::string & ConnectionId, std::function<void(WebSocketPacket&)> Event) {
-		if (!Connections.count(ConnectionId))return;
-		WebSocketPacket Content;
-		Event(Content);
-
-		auto [Header, HeaderSize] = MakePacketHeader(Content.Content.size(), Content.Opcode);
-
-		//size_t sz = Content.Content.size();
-		//unsigned char Header[10];
-
-		//Header[0] = Content.Opcode | 0x80;
-		//int HeaderSize;
-		//if (sz < 126) {
-		//	HeaderSize = 2;
-		//	Header[1] = sz;
-		//} else if (sz <= 0xffff) {
-		//	HeaderSize = 4;
-		//	Header[1] = 126;
-		//	Header[2] = sz >> 8;
-		//	Header[3] = sz & 0xff;
-		//} else {
-		//	HeaderSize = 10;
-		//	Header[1] = 127;
-
-		//	unsigned char * pSz = (unsigned char*)&sz;
-		//	Header[2] = pSz[7];
-		//	Header[3] = pSz[6];
-		//	Header[4] = pSz[5];
-		//	Header[5] = pSz[4];
-		//	Header[6] = pSz[3];
-		//	Header[7] = pSz[2];
-		//	Header[8] = pSz[1];
-		//	Header[9] = pSz[0];
-		//}
 		std::vector<std::string> ToDelete;
-		auto & Socket = Connections.at(ConnectionId);
-		if (Socket.Socket.Send(Header, HeaderSize) < 0 || Socket.Socket.Send(Content.Content) < 0)
-			ToDelete.push_back(ConnectionId);
-		for (auto & id : ToDelete)
-			CloseConnection(id);
-	}
-	void WebSocketServer::SendGroup(const std::string & GroupName, std::function<void(WebSocketPacket&)> Event) {
-		WebSocketPacket Content;
-		Event(Content);
+		{
+			std::shared_lock<std::shared_mutex> lock{ ConnectionMutex };
+			if (!Connections.count(ConnectionId))return;
+			WebSocketPacket Content;
+			Event(Content);
 
-		auto [Header, HeaderSize] = MakePacketHeader(Content.Content.size(), Content.Opcode);
+			auto [Header, HeaderSize] = MakePacketHeader(Content.Content.size(), Content.Opcode);
 
-		//size_t sz = Content.Content.size();
-		//unsigned char Header[10];
-
-		//Header[0] = Content.Opcode | 0x80;
-		//int HeaderSize;
-		//if (sz < 126) {
-		//	HeaderSize = 2;
-		//	Header[1] = sz;
-		//} else if (sz <= 0xffff) {
-		//	HeaderSize = 4;
-		//	Header[1] = 126;
-		//	Header[2] = sz >> 8;
-		//	Header[3] = sz & 0xff;
-		//} else {
-		//	HeaderSize = 10;
-		//	Header[1] = 127;
-
-		//	unsigned char * pSz = (unsigned char*)&sz;
-		//	Header[2] = pSz[7];
-		//	Header[3] = pSz[6];
-		//	Header[4] = pSz[5];
-		//	Header[5] = pSz[4];
-		//	Header[6] = pSz[3];
-		//	Header[7] = pSz[2];
-		//	Header[8] = pSz[1];
-		//	Header[9] = pSz[0];
-		//}
-		std::vector<std::string> ToDelete;
-		auto & Group = ConnectionGroups[GroupName];
-		for (auto & ConnectionId : Group) {
-			auto & Socket = Connections.at(ConnectionId);
+			auto& Socket = Connections.at(ConnectionId);
 			if (Socket.Socket.Send(Header, HeaderSize) < 0 || Socket.Socket.Send(Content.Content) < 0)
 				ToDelete.push_back(ConnectionId);
 		}
-		for (auto & id : ToDelete)
-			CloseConnection(id);
+		if(ToDelete.size()) {
+			std::unique_lock<std::shared_mutex> lock{ ConnectionMutex };
+			for (auto& id : ToDelete)
+				CloseConnection(id);
+		}
+	}
+	void WebSocketServer::SendGroup(const std::string & GroupName, std::function<void(WebSocketPacket&)> Event) {
+		std::vector<std::string> ToDelete;
+		{
+			std::shared_lock<std::shared_mutex> lock{ ConnectionMutex };
+			WebSocketPacket Content;
+			Event(Content);
+
+			auto [Header, HeaderSize] = MakePacketHeader(Content.Content.size(), Content.Opcode);
+
+			auto& Group = ConnectionGroups[GroupName];
+			for (auto& ConnectionId : Group) {
+				auto& Socket = Connections.at(ConnectionId);
+				if (Socket.Socket.Send(Header, HeaderSize) < 0 || Socket.Socket.Send(Content.Content) < 0)
+					ToDelete.push_back(ConnectionId);
+			}
+		}
+		if (ToDelete.size()) {
+			for (auto& id : ToDelete)
+				CloseConnection(id);
+		}
 	}
 	void WebSocketServer::SendAll(std::function<void(WebSocketPacket&)> Event) {
-		WebSocketPacket Content;
-		Event(Content);
-
-		auto [Header, HeaderSize] = MakePacketHeader(Content.Content.size(), Content.Opcode);
-
-		//size_t sz = Content.Content.size();
-		//unsigned char Header[10];
-
-		//Header[0] = Content.Opcode | 0x80;
-		//int HeaderSize;
-		//if (sz < 126) {
-		//	HeaderSize = 2;
-		//	Header[1] = sz;
-		//} else if (sz <= 0xffff) {
-		//	HeaderSize = 4;
-		//	Header[1] = 126;
-		//	Header[2] = sz >> 8;
-		//	Header[3] = sz & 0xff;
-		//} else {
-		//	HeaderSize = 10;
-		//	Header[1] = 127;
-
-		//	unsigned char * pSz = (unsigned char*)&sz;
-		//	Header[2] = pSz[7];
-		//	Header[3] = pSz[6];
-		//	Header[4] = pSz[5];
-		//	Header[5] = pSz[4];
-		//	Header[6] = pSz[3];
-		//	Header[7] = pSz[2];
-		//	Header[8] = pSz[1];
-		//	Header[9] = pSz[0];
-		//}
 		std::vector<std::string> ToDelete;
-		for (auto & con : Connections) {
-			auto & Socket = con.second;
-			if (Socket.Socket.Send(Header, HeaderSize) < 0 || Socket.Socket.Send(Content.Content) < 0)
-				ToDelete.push_back(con.first);
+		{
+			std::shared_lock<std::shared_mutex> lock{ ConnectionMutex };
+			WebSocketPacket Content;
+			Event(Content);
+
+			auto [Header, HeaderSize] = MakePacketHeader(Content.Content.size(), Content.Opcode);
+
+			for (auto& con : Connections) {
+				auto& Socket = con.second;
+				if (Socket.Socket.Send(Header, HeaderSize) < 0 || Socket.Socket.Send(Content.Content) < 0)
+					ToDelete.push_back(con.first);
+			}
 		}
-		for (auto & id : ToDelete)
-			CloseConnection(id);
+		if (ToDelete.size()) {
+			for (auto& id : ToDelete)
+				CloseConnection(id);
+		}
 	}
 
 	void WebSocketServer::SendAllExceptOne(const std::string & Id, std::function<void(WebSocketPacket&)> Event) {
-		WebSocketPacket Content;
-		Event(Content);
-
-		auto [Header, HeaderSize] = MakePacketHeader(Content.Content.size(), Content.Opcode);
-
-
-		/*size_t sz = Content.Content.size();
-		unsigned char Header[10];
-
-		Header[0] = Content.Opcode | 0x80;
-		int HeaderSize;
-		if (sz < 126) {
-			HeaderSize = 2;
-			Header[1] = sz;
-		} else if (sz <= 0xffff) {
-			HeaderSize = 4;
-			Header[1] = 126;
-			Header[2] = sz >> 8;
-			Header[3] = sz & 0xff;
-		} else {
-			HeaderSize = 10;
-			Header[1] = 127;
-
-			unsigned char * pSz = (unsigned char*)&sz;
-			Header[2] = pSz[7];
-			Header[3] = pSz[6];
-			Header[4] = pSz[5];
-			Header[5] = pSz[4];
-			Header[6] = pSz[3];
-			Header[7] = pSz[2];
-			Header[8] = pSz[1];
-			Header[9] = pSz[0];
-		}*/
 		std::vector<std::string> ToDelete;
-		for (auto & con : Connections) {
-			if (con.first == Id)continue;
-			auto & Socket = con.second;
-			if (Socket.Socket.Send(Header, HeaderSize) < 0 || Socket.Socket.Send(Content.Content) < 0)
-				ToDelete.push_back(con.first);
+		{
+			std::shared_lock<std::shared_mutex> lock{ ConnectionMutex };
+			WebSocketPacket Content;
+			Event(Content);
+
+			auto [Header, HeaderSize] = MakePacketHeader(Content.Content.size(), Content.Opcode);
+
+			for (auto& con : Connections) {
+				if (con.first == Id)continue;
+				auto& Socket = con.second;
+				if (Socket.Socket.Send(Header, HeaderSize) < 0 || Socket.Socket.Send(Content.Content) < 0)
+					ToDelete.push_back(con.first);
+			}
 		}
-		for (auto & id : ToDelete)
-			CloseConnection(id);
+		if (ToDelete.size()) {
+			for (auto& id : ToDelete)
+				CloseConnection(id);
+		}
 	}
 	void WebSocketServer::SendGroupExceptOne(const std::string & Id, const std::string & GroupName, std::function<void(WebSocketPacket&)> Event) {
-		WebSocketPacket Content;
-		Event(Content);
-
-		auto [Header, HeaderSize] = MakePacketHeader(Content.Content.size(), Content.Opcode);
-
-		/*size_t sz = Content.Content.size();
-		unsigned char Header[10];
-
-		Header[0] = Content.Opcode | 0x80;
-		int HeaderSize;
-		if (sz < 126) {
-			HeaderSize = 2;
-			Header[1] = sz;
-		} else if (sz <= 0xffff) {
-			HeaderSize = 4;
-			Header[1] = 126;
-			Header[2] = sz >> 8;
-			Header[3] = sz & 0xff;
-		} else {
-			HeaderSize = 10;
-			Header[1] = 127;
-
-			unsigned char * pSz = (unsigned char*)&sz;
-			Header[2] = pSz[7];
-			Header[3] = pSz[6];
-			Header[4] = pSz[5];
-			Header[5] = pSz[4];
-			Header[6] = pSz[3];
-			Header[7] = pSz[2];
-			Header[8] = pSz[1];
-			Header[9] = pSz[0];
-		}*/
 		std::vector<std::string> ToDelete;
-		auto & Group = ConnectionGroups[GroupName];
-		for (auto & ConnectionId : Group) {
-			if (ConnectionId == Id)continue;
-			auto & Socket = Connections.at(ConnectionId);
-			if (Socket.Socket.Send(Header, HeaderSize) < 0 || Socket.Socket.Send(Content.Content) < 0)
-				ToDelete.push_back(ConnectionId);
+		{
+			std::shared_lock<std::shared_mutex> lock{ ConnectionMutex };
+			WebSocketPacket Content;
+			Event(Content);
+
+			auto [Header, HeaderSize] = MakePacketHeader(Content.Content.size(), Content.Opcode);
+
+			std::vector<std::string> ToDelete;
+			auto& Group = ConnectionGroups[GroupName];
+			for (auto& ConnectionId : Group) {
+				if (ConnectionId == Id)continue;
+				auto& Socket = Connections.at(ConnectionId);
+				if (Socket.Socket.Send(Header, HeaderSize) < 0 || Socket.Socket.Send(Content.Content) < 0)
+					ToDelete.push_back(ConnectionId);
+			}
 		}
-		for (auto & id : ToDelete)
-			CloseConnection(id);
+		if (ToDelete.size()) {
+			for (auto& id : ToDelete)
+				CloseConnection(id);
+		}
 	}
 
 	void WebSocketServer::Run(const std::string& ConnectionId, const std::wstring& Function, const PVX::JSON::Item& Params) {
@@ -466,7 +357,38 @@ namespace PVX::Network {
 			}
 
 			resp[L"set-cookie"] = L"pvxWSId=" + Key;
-			Connections.insert({ key, req.GetWebSocket() });
+			auto s = req.GetWebSocket();
+			{
+				std::unique_lock<std::shared_mutex> lock{ ConnectionMutex };
+				ServingThreads[key] = std::thread([s, key, this] {
+					WebSocket Socket = s;
+					for (;;) {
+						if (auto res = Socket.Receive(); res < 0 || Socket.Opcode == WebSocket::Opcode_Close) {
+							CloseConnection(key);
+							break;
+						} else if (res > 0) {
+							int type = Socket.Message[0];
+							std::string Name;
+							size_t sz;
+							for (sz = 1; sz < Socket.Message.size() && Socket.Message[sz] != ':'; sz++) Name.push_back(Socket.Message[sz]);
+							if (ClientActions.count(Name)) {
+								if (type == 'j') {
+									JSON::Item params = JSON::jsElementType::Null;
+									if (Socket.Message.size() - sz - 1)
+										params = PVX::JSON::parse(&Socket.Message[sz + 1], Socket.Message.size() - sz - 1);
+
+									ClientActions[Name](params, key);
+								} else if (type == 'b') {
+									std::vector<unsigned char> data(Socket.Message.size() - sz - 1);
+									memcpy(&data[0], &Socket.Message[sz + 1], Socket.Message.size() - sz - 1);
+									ClientActionsRaw[Name](data, key);
+								}
+							}
+						}
+					}
+				});
+				Connections.insert({ key, s });
+			}
 			if (onConnect != nullptr)onConnect(key, Connections.at(key));
 		};
 	}
@@ -563,11 +485,13 @@ namespace PVX::Network {
 		ServerActions[Name] = Action;
 	}
 	void WebSocketServer::AddToGroup(const std::string & GroupName, const std::string & ConnectionId) {
+		std::unique_lock<std::shared_mutex> lock{ ConnectionMutex };
 		GroupConnections[GroupName].insert(ConnectionId);
 		ConnectionGroups[ConnectionId].insert(GroupName);
 	}
 
 	void WebSocketServer::RemoveFromGroup(const std::string & GroupName, const std::string & ConnectionId) {
+		std::unique_lock<std::shared_mutex> lock{ ConnectionMutex };
 		GroupConnections[GroupName].erase(ConnectionId);
 		ConnectionGroups[ConnectionId].erase(GroupName);
 	}
@@ -582,13 +506,15 @@ namespace PVX::Network {
 
 	void WebSocketServer::CloseConnection(const std::string & ConnectionId) {
 		auto str = ConnectionId;
+
 		if (ConnectionGroups.count(str)) {
-			for (auto & c : ConnectionGroups)
-				for (auto & g : c.second)
+			for (auto& c : ConnectionGroups)
+				for (auto& g : c.second)
 					GroupConnections[g].erase(str);
 			ConnectionGroups.erase(str);
 		}
 		Connections.erase(str);
+
 		if (onDisconnect != nullptr)onDisconnect(str);
 	}
 

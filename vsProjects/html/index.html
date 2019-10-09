@@ -4,7 +4,6 @@
 	<script src="/ws.js"></script>
 	<script>
 		angular.module("app", []).controller("ctrl", ["$scope", "$http", function ($scope, $http) {
-			//pvxWebSockets.SetAngularScope("body");
 			$scope.data = null;
 			$scope.GetData = function () {
 				$http.post("/api/test").then(function (r) {

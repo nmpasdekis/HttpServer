@@ -1,10 +1,14 @@
 {
   "test": [
     {
-      "Message": "This is a message"
+      "Message": "Nikos2",
+      "Value":  321
     },
     {
       "Message": "Another Message!"
+    },
+    {
+      "Message": "Another Message 2!"
     }
   ]
 }

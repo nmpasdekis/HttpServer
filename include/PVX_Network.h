@@ -16,6 +16,7 @@
 #include <PVX_DataBuilder.h>
 #include <PVX_Threading.h>
 #include <shared_mutex>
+#include <atomic>
 
 // C:\Users\PerVertEX\Google Drive\C++ Projects 2016\Libraries64\OpenSSL\bin64
 
@@ -363,7 +364,16 @@ namespace PVX {
 			std::map<std::string, WebSocket> Connections;
 			std::string functions;
 			void CloseConnection(const std::string& ConnectionId);
+
+			std::atomic_int running;
+			std::thread TreadCleanerThread;
+			std::mutex TreadCleanerMutex;
+			std::condition_variable ThreadCleaner_cv;
+			void ThreadCleanerClb();
+			std::vector<std::string> CleanUpKeys;
 		public:
+			~WebSocketServer();
+			WebSocketServer();
 			void AddClientAction(const std::string & Name, std::function<void(PVX::JSON::Item&, const std::string&)> Action);
 			void AddClientActionRaw(const std::string Name, std::function<void(const std::vector<unsigned char>&, const std::string&)> Action);
 			void AddServerAction(const std::string Name, std::function<void(WebSocketPacket&)> Action);

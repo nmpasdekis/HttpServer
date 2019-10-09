@@ -48,6 +48,9 @@ int main() {
 	ws.OnConnect([&](auto ConnectionId, auto Socket) {
 		printf("%s Connected\n", ConnectionId.c_str());
 	});
+	ws.OnDisconnect([&](auto ConnectionId) {
+		printf("%s Disconnected\n", ConnectionId.c_str());
+	});
 
 	ServerSocket.Serve(Http.GetHandler());
 

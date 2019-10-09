@@ -34,7 +34,9 @@ namespace PVX {
 					DefaultHeader.push_back({ Value.first, Value.second.String });
 		}
 
-		HttpServer::~HttpServer() {}
+		HttpServer::~HttpServer() {
+			WebSocketServers.clear();
+		}
 
 		std::wstring MakeRegex(const std::wstring & url) {
 			return L"^" + regex_replace(url, std::wregex(LR"regex(\{[^\s\{]*\})regex"), LR"regex(([^\s\?]*))regex") + LR"regex((\?(\S*))?)regex";

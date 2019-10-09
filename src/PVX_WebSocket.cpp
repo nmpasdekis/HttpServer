@@ -466,7 +466,7 @@ namespace PVX::Network {
 			resp.UtfData(ret.str(), L"script/javascript");
 		};
 	}
-	/* 
+	/*
 	ws.AddClientAction("action:arg1,arg2", [&](auto Arguments, auto ConnectionId) {
 		auto arg1 = Arguments[L"arg1"];
 		auto arg2 = Arguments[L"arg2"];
@@ -517,6 +517,34 @@ namespace PVX::Network {
 		Connections.erase(str);
 
 		if (onDisconnect != nullptr)onDisconnect(str);
+		
+		{
+			std::lock_guard<std::mutex> lock{ TreadCleanerMutex };
+			CleanUpKeys.push_back(str);
+			ThreadCleaner_cv.notify_one();
+		}
 	}
-
+	void WebSocketServer::ThreadCleanerClb() {
+		while (running || ServingThreads.size()) {
+			std::unique_lock<std::mutex> lock{ TreadCleanerMutex };
+			ThreadCleaner_cv.wait(lock, [this] { return CleanUpKeys.size()||!running; });
+			for (auto th : CleanUpKeys) {
+				ServingThreads[th].join();
+				ServingThreads.erase(th);
+			}
+			CleanUpKeys.clear();
+		}
+	}
+	WebSocketServer::~WebSocketServer() {
+		{
+			std::unique_lock<std::shared_mutex> lock{ ConnectionMutex };
+			for (auto& [c, s] : Connections) {
+				s.Socket.Disconnect();
+			}
+		}
+		running = false;
+		ThreadCleaner_cv.notify_one();
+		TreadCleanerThread.join();
+	}
+	WebSocketServer::WebSocketServer() : running{ 1 }, TreadCleanerThread(&WebSocketServer::ThreadCleanerClb, this) {}
 }

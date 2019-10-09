@@ -126,6 +126,9 @@ namespace PVX::Network {
 		}
 		return Socket.Send(Header, HeaderSize) < 0 || Socket.Send(Content.Content) < 0;
 	}
+	void WebSocket::Disconnect() {
+		Socket.Disconnect();
+	}
 	void WebSocketPacket::Text(const std::string & Text) {
 		Opcode = 1;
 		Content.resize(Text.size());
@@ -349,17 +352,30 @@ namespace PVX::Network {
 					auto spl = Split(tpl, L"=");
 					cookie[Trim(spl[0])] = Trim(spl[1]);
 				});
-				auto f = cookie.find(L"pvxWSId=");
+				auto f = cookie.find(L"pvxWSId");
 				if (f != cookie.end()) {
 					Key = f->second;
 					key = PVX::Encode::ToString(Key);
+					bool IsConnected;
+					{
+						std::shared_lock<std::shared_mutex> lock{ ConnectionMutex };
+						if (IsConnected = Connections.count(key))
+							Connections.at(key).Disconnect();
+					}
+					if (IsConnected) {
+						std::unique_lock<std::mutex> lock{ ThreadCleanerMutex };
+						if (auto th = ServingThreads.find(key); th!=ServingThreads.end()) {
+							th->second.join();
+							ServingThreads.erase(key);
+						}
+					}
 				}
-			}
-
+			} 
+			
 			resp[L"set-cookie"] = L"pvxWSId=" + Key;
 			auto s = req.GetWebSocket();
 			{
-				std::unique_lock<std::shared_mutex> lock{ ConnectionMutex };
+				std::unique_lock<std::mutex> lock{ ThreadCleanerMutex };
 				ServingThreads[key] = std::thread([s, key, this] {
 					WebSocket Socket = s;
 					for (;;) {
@@ -388,8 +404,13 @@ namespace PVX::Network {
 						}
 					}
 				});
+			}
+			{
+				std::unique_lock<std::shared_mutex> lock{ ConnectionMutex };
 				Connections.insert({ key, s });
 			}
+
+
 			if (onConnect != nullptr)onConnect(key, Connections.at(key));
 		};
 	}
@@ -437,7 +458,7 @@ namespace PVX::Network {
 					TO = 1000;
 					t.onopen&&t.onopen(e);
 					SetState("connected");
-					resolve();
+					resolve(t.Id);
 				}
 				t.ws.onmessage = function (e) {
 					let action = JSON.parse(e.data);
@@ -519,14 +540,14 @@ namespace PVX::Network {
 		if (onDisconnect != nullptr)onDisconnect(str);
 		
 		{
-			std::lock_guard<std::mutex> lock{ TreadCleanerMutex };
+			std::lock_guard<std::mutex> lock{ ThreadCleanerMutex };
 			CleanUpKeys.push_back(str);
-			ThreadCleaner_cv.notify_one();
 		}
+		ThreadCleaner_cv.notify_one();
 	}
 	void WebSocketServer::ThreadCleanerClb() {
 		while (running || ServingThreads.size()) {
-			std::unique_lock<std::mutex> lock{ TreadCleanerMutex };
+			std::unique_lock<std::mutex> lock{ ThreadCleanerMutex };
 			ThreadCleaner_cv.wait(lock, [this] { return CleanUpKeys.size()||!running; });
 			for (auto th : CleanUpKeys) {
 				ServingThreads[th].join();
@@ -544,7 +565,7 @@ namespace PVX::Network {
 		}
 		running = false;
 		ThreadCleaner_cv.notify_one();
-		TreadCleanerThread.join();
+		ThreadCleanerThread.join();
 	}
-	WebSocketServer::WebSocketServer() : running{ 1 }, TreadCleanerThread(&WebSocketServer::ThreadCleanerClb, this) {}
+	WebSocketServer::WebSocketServer() : running{ 1 }, ThreadCleanerThread(&WebSocketServer::ThreadCleanerClb, this) {}
 }

@@ -6,7 +6,7 @@
 using namespace PVX::Network;
 
 int main() {
-	TcpServer ServerSocket("8080");
+	TcpServer ServerSocket("80");
 	HttpServer Http;
 
 	PVX::JSON::Item actions;
@@ -37,6 +37,9 @@ int main() {
 		}
 		resp.StatusCode = 404;
 		resp.Html("<h3>Endpoint not found</h3>");
+	});
+	Http.Routes(L"/", [](HttpRequest& req, HttpResponse& resp) {
+		resp.ServeFile(L"html\\index.html");
 	});
 	Http.DefaultRouteForContent(L"\\html");
 

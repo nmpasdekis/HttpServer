@@ -345,6 +345,7 @@ namespace PVX {
 			std::vector<unsigned char> Message;
 			WebSocker_Opcode Opcode;
 			int HasMore;
+			void Disconnect();
 		};
 
 		class WebSocketServer {
@@ -366,8 +367,8 @@ namespace PVX {
 			void CloseConnection(const std::string& ConnectionId);
 
 			std::atomic_int running;
-			std::thread TreadCleanerThread;
-			std::mutex TreadCleanerMutex;
+			std::thread ThreadCleanerThread;
+			std::mutex ThreadCleanerMutex;
 			std::condition_variable ThreadCleaner_cv;
 			void ThreadCleanerClb();
 			std::vector<std::string> CleanUpKeys;

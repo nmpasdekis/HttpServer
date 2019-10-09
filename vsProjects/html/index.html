@@ -27,7 +27,8 @@
 			pvxWebSockets.Client.getName = function (data) {
 				names[data.Id] = data.Name;
 			}
-			pvxWebSockets.connect().then(function () {
+			pvxWebSockets.connect().then(function (Id) {
+				$scope.Id = Id;
 				$scope.send = function(txt){
 					pvxWebSockets.Server.send(txt);
 				}
@@ -42,7 +43,6 @@
 					$scope.line = "";
 				}
 			}
-			$scope
 		}]);
 	</script>
 </head>
@@ -50,11 +50,12 @@
 	<!--<pre>{{data|json}}</pre>-->
 	Name: <input ng-model="myname" ng-change="SetName(myname)" />
 	<div style="width:100%;height:500px;overflow-y:auto;border: 1px solid black">
-		<div ng-repeat="m in Messages">
-			<span>{{Name(m.Id)}}:</span>
+		<div style="padding:5px" ng-repeat="m in Messages">
+			<span style="{{Id==m.Id?'color:blue':''}}">{{Name(m.Id)}}:</span>
 			<span>{{m.Text}}</span>
 		</div>
 	</div>
 	<input ng-model="line" ng-keypress="onkey($event)" />
+	My Id = {{Id}}
 </body>
 </html>

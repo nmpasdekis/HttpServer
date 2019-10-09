@@ -11,16 +11,50 @@
 				});
 			}
 			$scope.GetData();
+			$scope.Messages = [];
+			$scope.line = "";
+			let names = {};
+			$scope.Name = function (id) {
+				return names[id] || id;
+			}
+
 			pvxWebSockets.Client.Updated = function (data) {
 				$scope.data = data;
 			}
+			pvxWebSockets.Client.GetMessages = function (data) {
+				$scope.Messages.push(data);
+			}
+			pvxWebSockets.Client.getName = function (data) {
+				names[data.Id] = data.Name;
+			}
 			pvxWebSockets.connect().then(function () {
-				//pvxWebSockets.Server.action();
+				$scope.send = function(txt){
+					pvxWebSockets.Server.send(txt);
+				}
+
+				$scope.SetName = function (txt) {
+					pvxWebSockets.Server.setName(txt);
+				}
 			});
+			$scope.onkey = function (e) {
+				if (e.key.toLowerCase() == "enter") {
+					pvxWebSockets.Server.send($scope.line);
+					$scope.line = "";
+				}
+			}
+			$scope
 		}]);
 	</script>
 </head>
 <body ng-app="app" ng-controller="ctrl">
-	<pre>{{data|json}}</pre>
+	<!--<pre>{{data|json}}</pre>-->
+	Name: <input ng-model="myname" ng-change="SetName(myname)" />
+	<div style="width:100%;height:500px;overflow-y:auto;border: 1px solid black">
+		<div ng-repeat="m in Messages">
+			<span>{{Name(m.Id)}}:</span>
+			<span>{{m.Text}}</span>
+		</div>
+	</div>
+	<input ng-model="line" ng-keypress="onkey($event)" />
 </body>
 </html>

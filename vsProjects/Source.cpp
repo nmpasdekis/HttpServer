@@ -45,6 +45,19 @@ int main() {
 		ws.Run(ConnectionId, L"Updated");
 	});
 
+	ws.AddClientAction("send:msg", [&](auto Arguments, auto ConnectionId) {
+		ws.RunAll( L"GetMessages", { 
+			{ L"Text", Arguments[L"msg"] },
+			{ L"Id", ConnectionId }
+		});
+	});
+	ws.AddClientAction("setName:msg", [&](auto Arguments, auto ConnectionId) {
+		ws.RunAll(L"getName", {
+			{ L"Name", Arguments[L"msg"] },
+			{ L"Id", ConnectionId }
+		});
+	});
+
 	ws.OnConnect([&](auto ConnectionId, auto Socket) {
 		printf("%s Connected\n", ConnectionId.c_str());
 	});

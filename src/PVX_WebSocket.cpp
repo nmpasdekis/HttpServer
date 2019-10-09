@@ -364,6 +364,7 @@ namespace PVX::Network {
 					WebSocket Socket = s;
 					for (;;) {
 						if (auto res = Socket.Receive(); res < 0 || Socket.Opcode == WebSocket::Opcode_Close) {
+							std::unique_lock<std::shared_mutex> lock{ ConnectionMutex };
 							CloseConnection(key);
 							break;
 						} else if (res > 0) {

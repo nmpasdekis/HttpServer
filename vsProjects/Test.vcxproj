@@ -70,12 +70,12 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(SolutionDir)include;C:\Users\mpasdekis\Source\Repos\nmpasdekis\PVX_General\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration);D:\GitProjects2020\Repos\External\$(Configuration);C:\Users\mpasdekis\Source\Repos\nmpasdekis\HttpServer\Modules\lib\$(Configuration);$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)include;D:\GitProjects2020\Repos\PVX_General\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration);D:\GitProjects2020\Repos\External\$(Configuration);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(SolutionDir)include;C:\Users\mpasdekis\Source\Repos\nmpasdekis\PVX_General\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration);D:\GitProjects2020\Repos\External\$(Configuration);C:\Users\mpasdekis\Source\Repos\nmpasdekis\HttpServer\Modules\lib\$(Configuration);$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)include;D:\GitProjects2020\Repos\PVX_General\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration);D:\GitProjects2020\Repos\External\$(Configuration);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <IncludePath>$(SolutionDir)include;$(IncludePath)</IncludePath>
@@ -94,7 +94,7 @@
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>HttpServer.lib;zlibstatic.lib;Comdlg32.lib;PVX_General.lib</AdditionalDependencies>
+      <AdditionalDependencies>HttpServer.lib;zlibstat.lib;Comdlg32.lib;PVX_General.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -136,7 +136,7 @@
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>HttpServer.lib;zlibstatic.lib;Comdlg32.lib;PVX_General.lib</AdditionalDependencies>
+      <AdditionalDependencies>HttpServer.lib;zlibstat.lib;Comdlg32.lib;PVX_General.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>

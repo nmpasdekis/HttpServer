@@ -174,6 +174,9 @@ namespace PVX {
 			long long operator()(const std::wstring & Name);
 			TcpSocket Socket;
 			std::map<std::wstring, std::wstring> GetVariableMap() const;
+			void BasicAuthentication(std::function<void(const std::wstring& Username, const std::wstring& Password)> clb);
+
+
 		private:
 			std::map<std::wstring, UtfHelper> Variables;
 			void SetMultipartForm(const std::wstring & bound);
@@ -277,6 +280,8 @@ namespace PVX {
 			Route ContentPathRoute(const std::wstring & url, const std::wstring & Path);
 			void DefaultRouteForContent(const std::wstring & Path);
 			std::wstring StartSession(PVX::Network::HttpRequest & req, PVX::Network::HttpResponse & resp);
+
+			void BasicAuthentication(std::function<void(const std::wstring&, const std::wstring&)> clb);
 		protected:
 			int SendResponse(TcpSocket&, HttpRequest & http, HttpResponse&);
 			void HandleRequest(TcpSocket &, HttpRequest &, Route & );

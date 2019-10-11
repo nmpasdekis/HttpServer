@@ -1,5 +1,6 @@
 #include <PVX_Network.h>
 #include <PVX_Encode.h>
+#include <PVX_Encrypt.h>
 #include <PVX_String.h>
 #include <PVX.inl>
 #include <assert.h>
@@ -330,7 +331,7 @@ namespace PVX::Network {
 		for (auto g : txt) msg.push_back(g);
 		for (auto g : GUID) msg.push_back(g);
 
-		auto Out = PVX::Encode::SHA1(msg.data(), msg.size());
+		auto Out = PVX::Encrypt::SHA1(msg.data(), msg.size());
 
 		return PVX::Encode::Base64(Out.data(), 20);
 	}
@@ -346,31 +347,31 @@ namespace PVX::Network {
 			resp[L"connection"] = L"upgrade";
 			resp[L"sec-websocket-accept"] = Key;
 
-			if (req.HasHeader("cookie")) {
-				std::map<std::wstring, std::wstring> cookie;
-				forEach(Split_No_Empties(req.Headers["cookie"], L";"), [&cookie](const std::wstring & tpl) {
-					auto spl = Split(tpl, L"=");
-					cookie[Trim(spl[0])] = Trim(spl[1]);
-				});
-				auto f = cookie.find(L"pvxWSId");
-				if (f != cookie.end()) {
-					Key = f->second;
-					key = PVX::Encode::ToString(Key);
-					bool IsConnected;
-					{
-						std::shared_lock<std::shared_mutex> lock{ ConnectionMutex };
-						if (IsConnected = Connections.count(key))
-							Connections.at(key).Disconnect();
-					}
-					if (IsConnected) {
-						std::unique_lock<std::mutex> lock{ ThreadCleanerMutex };
-						if (auto th = ServingThreads.find(key); th!=ServingThreads.end()) {
-							th->second.join();
-							ServingThreads.erase(key);
-						}
-					}
-				}
-			} 
+			//if (auto& h = *req.HasHeader("cookie"); &h) {
+			//	std::map<std::wstring, std::wstring> cookie;
+			//	forEach(Split_No_Empties(h, L";"), [&cookie](const std::wstring & tpl) {
+			//		auto [name, value] = Split2_Trimed(tpl, L"=");
+			//		cookie[name] = value;
+			//	});
+			//	auto f = cookie.find(L"pvxWSId");
+			//	if (f != cookie.end()) {
+			//		Key = f->second;
+			//		key = PVX::Encode::ToString(Key);
+			//		bool IsConnected;
+			//		{
+			//			std::shared_lock<std::shared_mutex> lock{ ConnectionMutex };
+			//			if (IsConnected = Connections.count(key))
+			//				Connections.at(key).Disconnect();
+			//		}
+			//		if (IsConnected) {
+			//			std::unique_lock<std::mutex> lock{ ThreadCleanerMutex };
+			//			if (auto th = ServingThreads.find(key); th!=ServingThreads.end()) {
+			//				th->second.join();
+			//				ServingThreads.erase(key);
+			//			}
+			//		}
+			//	}
+			//} 
 			
 			resp[L"set-cookie"] = L"pvxWSId=" + Key;
 			auto s = req.GetWebSocket();

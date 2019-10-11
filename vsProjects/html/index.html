@@ -47,7 +47,6 @@
 	</script>
 </head>
 <body ng-app="app" ng-controller="ctrl">
-	<!--<pre>{{data|json}}</pre>-->
 	Name: <input ng-model="myname" ng-change="SetName(myname)" />
 	<div style="width:100%;height:500px;overflow-y:auto;border: 1px solid black">
 		<div style="padding:5px" ng-repeat="m in Messages">
@@ -55,7 +54,8 @@
 			<span>{{m.Text}}</span>
 		</div>
 	</div>
-	<input ng-model="line" ng-keypress="onkey($event)" />
+	<input ng-model="line" ng-keypress="onkey($event)" /><br />
 	My Id = {{Id}}
+	<pre style="background-color:lightgray;padding:3px">{{data|json}}</pre>
 </body>
 </html>

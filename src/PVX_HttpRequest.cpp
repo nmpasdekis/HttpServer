@@ -185,4 +185,13 @@ namespace PVX::Network {
 		for (auto& [n, v] : Variables) ret[n] = v;
 		return ret;
 	}
+	void HttpRequest::BasicAuthentication(std::function<void(const std::wstring& Username, const std::wstring& Password)> clb) {
+		const std::wregex r(LR"regex(basic\s+(.+))regex", std::regex_constants::optimize|std::regex_constants::icase);
+		if (auto& Auth = *HasHeader("authorization"); &Auth) {
+			if (auto match = PVX::regex_match(Auth, r); match.size()) {
+				auto [Username, Password] = PVX::String::Split2(PVX::Decode::UTF(PVX::Decode::Base64(PVX::Encode::ToString(match[1]))), L":");
+				clb(Username, Password);
+			}
+		}
+	}
 }

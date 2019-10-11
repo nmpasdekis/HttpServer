@@ -262,6 +262,12 @@ namespace PVX {
 			return req.SessionId = req.Cookies.at(L"sid");
 		}
 
+		void HttpServer::BasicAuthentication(std::function<void(const std::wstring&, const std::wstring&)> clb) {
+			AddFilter([clb](PVX::Network::HttpRequest& req, PVX::Network::HttpResponse& resp) {
+				req.BasicAuthentication(clb);
+				return 1;
+			});
+		}
 
 		int CompressContent(PVX_DataBuilder & Content) {
 			Content.SetData(PVX::Compress::Deflate(Content.GetDataVector()));

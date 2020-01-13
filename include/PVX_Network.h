@@ -176,7 +176,7 @@ namespace PVX {
 			std::map<std::wstring, std::wstring> GetVariableMap() const;
 			void BasicAuthentication(std::function<void(const std::wstring& Username, const std::wstring& Password)> clb);
 
-
+			PVX::JSON::Item User;
 		private:
 			std::map<std::wstring, UtfHelper> Variables;
 			void SetMultipartForm(const std::wstring & bound);
@@ -218,6 +218,8 @@ namespace PVX {
 			void ClearCookie(const std::wstring & Name);
 			int SendHeader(size_t ContentLength = 0);
 			void AllowOrigin(HttpRequest& req, const std::set<std::wstring>& Allow = {});
+
+			void MakeWebToken(const PVX::JSON::Item& User);
 		protected:
 			TcpSocket Socket;
 			size_t RangeSize;
@@ -256,6 +258,7 @@ namespace PVX {
 		} HttpContext;
 
 		class HttpServer {
+			friend class HttpResponse;
 		public:
 			HttpServer();
 			HttpServer(const std::wstring & ConfigFile);
@@ -282,11 +285,14 @@ namespace PVX {
 			std::wstring StartSession(PVX::Network::HttpRequest & req, PVX::Network::HttpResponse & resp);
 
 			void BasicAuthentication(std::function<void(const std::wstring&, const std::wstring&)> clb);
+			void EnableWebToken(const std::string& Key);
 		protected:
 			int SendResponse(TcpSocket&, HttpRequest & http, HttpResponse&);
 			void HandleRequest(TcpSocket &, HttpRequest &, Route & );
 			void SetDefaultHeader(HttpResponse &);
 			std::wstring MakeSession();
+
+			int HandleWebToken(HttpRequest& req, HttpResponse& resp);
 
 			std::vector<std::unique_ptr<WebSocketServer>> WebSocketServers;
 			std::vector<Route> Router;
@@ -295,8 +301,8 @@ namespace PVX {
 			std::vector<SimpleTuple> DefaultHeader;
 			std::vector<std::function<int(HttpRequest&, HttpResponse&)>> Filters;
 			std::set<std::wstring> Sessions;
+			std::string TokenKey;
 			friend class WebSocket;
-			//friend class HttpResponce;
 		};
 
 		class WebSocketPacket {

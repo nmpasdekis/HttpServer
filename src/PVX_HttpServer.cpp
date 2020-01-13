@@ -1,6 +1,7 @@
 #include<PVX_Network.h>
 #include<PVX_File.h>
 #include<PVX_Encode.h>
+#include<PVX_Encrypt.h>
 #include<regex>
 #include<map>
 #include <PVX_Deflate.h>
@@ -227,9 +228,13 @@ namespace PVX {
 #endif
 					std::wsmatch Extension;
 					std::map<std::wstring, std::wstring>::iterator pMime;
-					if (std::regex_search(path, Extension, std::wregex(L"\\.([^\\.]*)")) && Extension[1].matched && (pMime = Mime.find(Extension[1].str())) != Mime.end()) {
+					auto ext = PVX::IO::FileExtension(path);
+					if ((pMime = Mime.find(ext)) != Mime.end()) {
 						resp[L"Content-Type"] = pMime->second;
 					}
+					//if (std::regex_search(path, Extension, std::wregex(L"\\.([^\\.]*)")) && Extension[1].matched && (pMime = Mime.find(Extension[1].str())) != Mime.end()) {
+					//	resp[L"Content-Type"] = pMime->second;
+					//}
 				}
 			};
 		}
@@ -267,6 +272,24 @@ namespace PVX {
 				req.BasicAuthentication(clb);
 				return 1;
 			});
+		}
+
+		int HttpServer::HandleWebToken(HttpRequest& req, HttpResponse& resp) {
+			using namespace PVX::Encrypt;
+			if (auto k = req.Cookies.find(L"pxx-token"); k!=req.Cookies.end() && k->second.size() > ((32 * 4 + 2) / 3)) {
+				auto Token = PVX::Decode::Base64Url(k->second);
+				auto Hash = HMAC<SHA256_Algorithm>(TokenKey.data(), TokenKey.size(), Token.data() + 32, Token.size()-32);
+				if (!memcmp(Hash.data(), Token.data(), 32)) {
+					req.User = PVX::JSON::parse(Token.data() + 32, Token.size() - 32);
+				}
+			}
+			return 1;
+		}
+
+		void HttpServer::EnableWebToken(const std::string& Key) {
+			using namespace std::placeholders;
+			TokenKey = Key;
+			AddFilter(std::bind(&HttpServer::HandleWebToken, this, _1, _2));
 		}
 
 		int CompressContent(PVX_DataBuilder & Content) {

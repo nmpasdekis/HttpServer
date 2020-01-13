@@ -1,5 +1,6 @@
 #include <PVX_Network.h>
 #include <PVX_Encode.h>
+#include <PVX_Encrypt.h>
 #include <PVX_File.h>
 #include <sstream>
 
@@ -297,6 +298,17 @@ namespace PVX::Network {
 		std::wstring origin = req.Headers["origin"];
 		if (!Allow.size()||Allow.find(origin)!=Allow.end())
 			(*this)[L"Access-Control-Allow-Origin"] = origin;
+	}
+
+	void HttpResponse::MakeWebToken(const PVX::JSON::Item& User) {
+		using namespace PVX::Encrypt;
+		auto usr = PVX::Encode::UTF(PVX::JSON::stringify(User));
+		usr.resize(3 * ((usr.size() + 32 + 2) / 3) - 32);
+		auto hash = HMAC<SHA256_Algorithm>(Server->TokenKey, usr);
+		std::vector<unsigned char> FullToken(32 + usr.size());
+		memcpy(&FullToken[0], hash.data(), 32);
+		memcpy(&FullToken[32], usr.data(), usr.size());
+		SetCookie(L"pxx-token", PVX::Encode::ToString(PVX::Encode::Base64Url(FullToken)));
 	}
 
 }

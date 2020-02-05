@@ -371,7 +371,6 @@ namespace PVX {
 			std::map<std::string, std::set<std::string>> GroupConnections, ConnectionGroups;
 			std::function<void(HttpRequest&, HttpResponse&)> GetHandler();
 			std::function<void(HttpRequest&, HttpResponse&)> GetScriptHandler(const std::wstring & Url);
-			//std::vector<std::thread> ServingThread;
 			std::map<std::string, std::thread> ServingThreads;
 			std::map<std::string, WebSocket> Connections;
 			std::string functions;
@@ -389,10 +388,13 @@ namespace PVX {
 			void AddClientAction(const std::string & Name, std::function<void(PVX::JSON::Item&, const std::string&)> Action);
 			void AddClientActionRaw(const std::string Name, std::function<void(const std::vector<unsigned char>&, const std::string&)> Action);
 			void AddServerAction(const std::string Name, std::function<void(WebSocketPacket&)> Action);
+			
 			void AddToGroup(const std::string& GroupName, const std::string & ConnectionId);
 			void RemoveFromGroup(const std::string& GroupName, const std::string & ConnectionId);
+
 			void OnConnect(std::function<void(const std::string&, WebSocket&)> fnc);
 			void OnDisconnect(std::function<void(const std::string&)> fnc);
+			
 			void Send(const std::string & ConnectionId, std::function<void(WebSocketPacket&)> Event);
 			void SendGroup(const std::string & GroupName, std::function<void(WebSocketPacket&)> Event);
 			void SendAll(std::function<void(WebSocketPacket&)> Event);

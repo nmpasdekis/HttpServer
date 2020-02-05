@@ -143,7 +143,7 @@ namespace PVX::Network {
 		Text(PVX::JSON::stringify(Json));
 	}
 	void WebSocketPacket::Run(const std::wstring & Function, const PVX::JSON::Item & Params) {
-		return Json({ { Function, Params } });
+		Json({ { Function, Params } });
 	}
 	void WebSocketPacket::Data(const void * data, size_t Size) {
 		Opcode = 2;
@@ -345,34 +345,7 @@ namespace PVX::Network {
 			resp.StatusCode = 101;
 			resp[L"upgrade"] = L"websocket";
 			resp[L"connection"] = L"upgrade";
-			resp[L"sec-websocket-accept"] = Key;
-
-			//if (auto& h = *req.HasHeader("cookie"); &h) {
-			//	std::map<std::wstring, std::wstring> cookie;
-			//	forEach(Split_No_Empties(h, L";"), [&cookie](const std::wstring & tpl) {
-			//		auto [name, value] = Split2_Trimed(tpl, L"=");
-			//		cookie[name] = value;
-			//	});
-			//	auto f = cookie.find(L"pvxWSId");
-			//	if (f != cookie.end()) {
-			//		Key = f->second;
-			//		key = PVX::Encode::ToString(Key);
-			//		bool IsConnected;
-			//		{
-			//			std::shared_lock<std::shared_mutex> lock{ ConnectionMutex };
-			//			if (IsConnected = Connections.count(key))
-			//				Connections.at(key).Disconnect();
-			//		}
-			//		if (IsConnected) {
-			//			std::unique_lock<std::mutex> lock{ ThreadCleanerMutex };
-			//			if (auto th = ServingThreads.find(key); th!=ServingThreads.end()) {
-			//				th->second.join();
-			//				ServingThreads.erase(key);
-			//			}
-			//		}
-			//	}
-			//} 
-			
+			resp[L"sec-websocket-accept"] = Key;			
 			resp[L"set-cookie"] = L"pvxWSId=" + Key;
 			auto s = req.GetWebSocket();
 			{
@@ -488,12 +461,7 @@ namespace PVX::Network {
 			resp.UtfData(ret.str(), L"script/javascript");
 		};
 	}
-	/*
-	ws.AddClientAction("action:arg1,arg2", [&](auto Arguments, auto ConnectionId) {
-		auto arg1 = Arguments[L"arg1"];
-		auto arg2 = Arguments[L"arg2"];
-	});
-	*/
+
 	void WebSocketServer::AddClientAction(const std::string & Name, std::function<void(PVX::JSON::Item&, const std::string&)> Action) {
 		functions += (functions.size() ? "," : "") + ("\"" + Name + "\"");
 		std::string name;

@@ -33,11 +33,3 @@ UtfHelper::operator std::wstring&() {
 PVX::Network::UtfHelper::operator std::wstring() const {
 	return Text;
 }
-
-//PVX::Network::UtfHelper::operator std::string() {
-//	return PVX::Encode::ToString(Text);
-//}
-
-//UtfHelper::operator std::vector<unsigned char>() {
-//
-//}

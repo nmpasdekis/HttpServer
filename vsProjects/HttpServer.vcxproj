@@ -86,7 +86,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\src\PVX_DataBuilder.cpp" />
-    <ClCompile Include="..\src\PVX_Dictionary.cpp" />
+    <ClCompile Include="..\src\PVX_UtfHelper.cpp" />
     <ClCompile Include="..\src\PVX_HttpClient.cpp" />
     <ClCompile Include="..\src\PVX_HttpRequest.cpp" />
     <ClCompile Include="..\src\PVX_HttpResponse.cpp" />

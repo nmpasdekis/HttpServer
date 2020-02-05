@@ -24,15 +24,15 @@ namespace PVX {
 			auto Config = PVX::IO::LoadJson(ConfigFile.c_str());
 
 			if (auto it = Config.Has(L"Mime"); it)
-				for (auto & [Key, Value] : it->Object)
-					Mime[Key] = Value.String;
+				for (auto & [Key, Value] : it->getObject())
+					Mime[Key] = Value.String();
 
 			if (auto it = Config.Has(L"ContentDir"); it)
-				SetDefaultRoute(ContentServer(it->String));
+				SetDefaultRoute(ContentServer(it->String()));
 
 			if (auto it = Config.Has(L"ResponseHeader"); it)
-				for (auto & Value : it->Object)
-					DefaultHeader.push_back({ Value.first, Value.second.String });
+				for (auto & Value : it->getObject())
+					DefaultHeader.push_back({ Value.first, Value.second.String() });
 		}
 
 		HttpServer::~HttpServer() {
